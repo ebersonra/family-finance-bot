@@ -2,8 +2,7 @@
 // FamilyFinanceBot · Formatters
 // ─────────────────────────────────────────────
 
-import type { ParsedTransaction, GoalSummary } from '../types';
-import type { MonthlySummary } from '../services/supabase';
+import type { ParsedTransaction, FamilyGoal, ApiMonthlySummary } from '../types';
 
 const CATEGORY_LABELS: Record<string, string> = {
   food: '🛒 Alimentação',
@@ -68,20 +67,29 @@ export function formatAmbiguity(tx: ParsedTransaction): string {
 
 // ── Resumo mensal ─────────────────────────────────
 
-export function formatSummary(summary: MonthlySummary): string {
-  const { totalIncome, totalExpenses, balance, topCategories } = summary;
-  const now = new Date();
-  const monthName = now.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+export function formatSummary(summary: ApiMonthlySummary): string {
+  const { totals, by_category, month } = summary;
+  const { total_income, total_expenses, balance } = totals;
+
+  // Mês formatado: "2026-03" → "março de 2026"
+  const [year, monthNum] = month.split('-');
+  const monthName = new Date(Number(year), Number(monthNum) - 1, 1)
+    .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  // Top 3 categorias por valor absoluto
+  const topCategories = [...by_category]
+    .sort((a, b) => b.category_total - a.category_total)
+    .slice(0, 3);
 
   const topLines = topCategories.map(
-    (c, i) => `  ${i + 1}. ${CATEGORY_LABELS[c.category] ?? c.category}: *${fmt(c.total)}*`,
+    (c, i) => `  ${i + 1}. ${CATEGORY_LABELS[c.category] ?? c.category}: *${fmt(c.category_total)}*`,
   );
 
   return [
     `📊 *Resumo de ${monthName}*`,
     ``,
-    `📥 Entradas: *${fmt(totalIncome)}*`,
-    `📤 Saídas:   *${fmt(totalExpenses)}*`,
+    `📥 Entradas: *${fmt(total_income)}*`,
+    `📤 Saídas:   *${fmt(total_expenses)}*`,
     `💰 Saldo:    *${balance >= 0 ? '+' : ''}${fmt(balance)}*`,
     ``,
     topCategories.length > 0 ? `🏆 *Top categorias:*` : '',
@@ -95,14 +103,15 @@ export function formatSummary(summary: MonthlySummary): string {
 
 // ── Metas ─────────────────────────────────────────
 
-export function formatGoals(goals: GoalSummary[]): string {
+export function formatGoals(goals: FamilyGoal[]): string {
   if (goals.length === 0) {
     return '🎯 Nenhuma meta cadastrada ainda. Abra o app para criar!';
   }
 
   const lines = goals.map((g) => {
-    const bar = progressBar(g.pct);
-    return `${g.emoji ?? '🎯'} *${g.label}*\n  ${bar} ${g.pct}% · ${fmt(g.saved)} de ${fmt(g.target)}`;
+    const pct = g.progress_percent ?? Math.min(100, Math.round((g.saved / g.target) * 100));
+    const bar = progressBar(pct);
+    return `🎯 *${g.label}*\n  ${bar} ${pct}% · ${fmt(g.saved)} de ${fmt(g.target)} · prazo ${g.deadline}`;
   });
 
   return [`🎯 *Metas da família*`, ``, ...lines].join('\n\n');

@@ -250,19 +250,55 @@ import { classifyCommand } from '../utils/classifier';
 
 ## 8. Segurança
 
-| Regra                                           | Implementação                                     |
-|-------------------------------------------------|---------------------------------------------------|
-| Autorização por número de telefone              | `ALLOWED_NUMBERS` comparado em `Set`              |
-| Mensagens de grupos ignoradas                   | `msg.from.endsWith('@g.us')` → return             |
-| Mensagens do próprio bot ignoradas              | `msg.fromMe` → return                             |
-| Credenciais nunca no código                     | Somente via variáveis de ambiente                 |
-| Sessão WhatsApp local                           | `.wwebjs_auth/` (no `.gitignore`)                 |
-| Supabase com `service_role` key                 | Bypass de RLS — usar somente no backend (bot)     |
-| Validação mínima do JSON retornado pelo Claude  | Verifica `amount`, `category`, `name`             |
-| RLS `members`: cada usuário vê apenas o próprio | `user_id = auth.uid()`                            |
-| RLS `transactions`: isolado por usuário          | Subquery `member_id IN (SELECT id FROM members WHERE user_id = auth.uid())` |
-| RLS `goals`: compartilhado — família toda        | `auth.uid() IS NOT NULL`                          |
-| Sync automático `users → members`               | Trigger `trg_sync_member_from_user` (name, phone) |
+### Modelo de Autenticação
+
+> 🔴 **Este projeto usa AUTENTICAÇÃO CUSTOMIZADA** via `public.users` (phone + name).
+> **NÃO** usa `auth.uid()` do Supabase Auth.
+> Referência: OWASP A01:2021 – Broken Access Control (CWE-284)
+
+O `user_id` autenticado é propagado para as políticas RLS via variável de sessão PostgreSQL:
+
+```sql
+-- Chamada obrigatória antes de qualquer operação que dependa de RLS
+SELECT exec_with_user_context('<user-uuid>');
+-- Internamente executa: SET LOCAL app.current_user_id = 'user-uuid';
+```
+
+### Funções de Autenticação (definidas no banco)
+
+| Função                                 | Tipo               | Descrição                                                     |
+|--------------------------------------|--------------------|---------------------------------------------------------------|
+| `get_current_user_id()`              | `SECURITY DEFINER` | Lê `app.current_user_id`, valida `is_active=TRUE` e `deleted_at IS NULL`, retorna UUID ou NULL |
+| `exec_with_user_context(UUID, TEXT)` | `SECURITY DEFINER` | Valida o usuário e executa `SET LOCAL app.current_user_id`. GRANT só para `authenticated` |
+
+**Regra crítica:** `get_current_user_id()` retorna `NULL` se:
+- Contexto não definido (`app.current_user_id` vazio)
+- UUID inválido
+- Usuário com `is_active = FALSE`
+- Usuário com `deleted_at IS NOT NULL`
+
+Retornar NULL bloqueia automaticamente o acesso via RLS.
+
+### Regras de Segurança Aplicadas
+
+| Regra                                              | Implementação                                                |
+|----------------------------------------------------|-----------------------------------------------------------|
+| Autorização por número de telefone (bot)          | `ALLOWED_NUMBERS` comparado em `Set`                      |
+| Mensagens de grupos ignoradas                      | `msg.from.endsWith('@g.us')` → return                     |
+| Mensagens do próprio bot ignoradas                 | `msg.fromMe` → return                                     |
+| Credenciais nunca no código                        | Somente via variáveis de ambiente                         |
+| Sessão WhatsApp local                              | `.wwebjs_auth/` (no `.gitignore`)                         |
+| Supabase com `service_role` key (bot)              | Bypassa RLS — nunca expor ao cliente                      |
+| Validação mínima do JSON retornado pelo Claude     | Verifica `amount`, `category`, `name`                     |
+| RLS `members`: isolado por usuário                 | `user_id = get_current_user_id()`                         |
+| RLS `members` UPDATE: impede transferência de ownership | `WITH CHECK(user_id = get_current_user_id())`         |
+| RLS `transactions`: isolado por usuário            | `EXISTS (SELECT 1 FROM members WHERE id = member_id AND user_id = get_current_user_id())` |
+| RLS `transactions` UPDATE: impede reatribuição de `member_id` | `WITH CHECK` no USING e no novo valor        |
+| RLS `goals`: compartilhado — família toda          | `get_current_user_id() IS NOT NULL`                       |
+| Sync automático `users → members`                 | Trigger `trg_sync_member_from_user` (name, phone)         |
+| Funções SECURITY DEFINER com ownership manual     | `fn_delete_last_whatsapp_transaction` verifica `get_current_user_id()` antes de deletar |
+| GRANT de funções explícito                        | `authenticated` para funções expostas; nunca para `anon`  |
+| Validação de usuários inativos/deletados           | `exec_with_user_context` e `get_current_user_id()` rejeitam `is_active=FALSE` ou `deleted_at IS NOT NULL` |
 
 ---
 
@@ -311,29 +347,102 @@ client.on('disconnected', (reason) => {
 
 ## 11. Limitações Conhecidas e Débitos Técnicos
 
-| Item                                  | Status     | Solução Sugerida                          |
-|---------------------------------------|------------|-------------------------------------------|
-| Sessões em memória (Map)              | ⚠️ Débito  | Migrar para Redis                         |
-| Sem testes automatizados              | ⚠️ Débito  | Adicionar Jest + mocks                    |
-| `source` em `deleteLastTransaction`  | ℹ️ Nota    | Só apaga lançamentos via WhatsApp         |
-| Sem rate limiting por número          | ⚠️ Débito  | Implementar throttle para evitar abuso    |
-| Deadline de metas como `text`         | ℹ️ Nota    | Considerar migrar para `date` no futuro   |
-| `members.phone` requer dígitos puros  | ℹ️ Nota    | Trigger converte automaticamente ao sync  |
+| Item                                    | Status     | Solução Sugerida                               |
+|-----------------------------------------|------------|----------------------------------------------|
+| Sessões em memória (Map)                | ⚠️ Débito  | Migrar para Redis                            |
+| Sem testes automatizados                | ⚠️ Débito  | Adicionar Jest + mocks                       |
+| `source` em `deleteLastTransaction`    | ℹ️ Nota    | Só apaga lançamentos via WhatsApp             |
+| Sem rate limiting por número            | ⚠️ Débito  | Implementar throttle para evitar abuso       |
+| Deadline de metas como `text`           | ℹ️ Nota    | Considerar migrar para `date` no futuro      |
+| `members.phone` requer dígitos puros    | ℹ️ Nota    | Trigger converte automaticamente ao sync     |
+| `app.current_user_id` limpo após COMMIT | ℹ️ Nota    | `SET LOCAL` garante escopo por transação     |
 
 ---
 
 ## 12. Funções e Triggers do Banco
 
-| Nome                                    | Tipo      | Descrição                                                     |
-|-----------------------------------------|-----------|---------------------------------------------------------------|
-| `fn_sync_member_from_user()`            | Trigger   | Sincroniza `members.name` e `members.phone` após UPDATE em `users` |
-| `trg_sync_member_from_user`             | Trigger   | Dispara `AFTER UPDATE OF name, phone ON public.users`        |
-| `fn_delete_last_whatsapp_transaction()` | Function  | Remove último lançamento WhatsApp de um membro (server-side) |
-| `fn_monthly_summary(p_month)`           | Function  | Resumo financeiro mensal com totais e breakdown por categoria |
+| Nome                                         | Tipo                        | GRANT           | Descrição                                                            |
+|----------------------------------------------|-----------------------------|-----------------|----------------------------------------------------------------------|
+| `get_current_user_id()`                      | `SECURITY DEFINER STABLE`   | _(público)_     | Lê sessão, valida `is_active` e `deleted_at`, retorna UUID ou NULL     |
+| `exec_with_user_context(UUID, TEXT)`         | `SECURITY DEFINER`          | `authenticated` | Define `app.current_user_id`; valida usuário ativo                    |
+| `fn_sync_member_from_user()`                 | `SECURITY DEFINER` (trigger)| _(interno)_     | Sincroniza `name`/`phone` de `members` ao atualizar `users`          |
+| `trg_sync_member_from_user`                  | Trigger                     | —               | `AFTER UPDATE OF name, phone ON public.users`                        |
+| `fn_delete_last_whatsapp_transaction(UUID)`  | `SECURITY DEFINER`          | `authenticated` | Valida ownership manualmente; remove último lançamento WhatsApp        |
+| `fn_monthly_summary(DATE)`                   | `STABLE` (sem SECURITY DEFINER) | `authenticated` | Resumo mensal; respeita RLS via contexto de sessão           |
 
 ### Views disponíveis
 
-| View                        | Descrição                                              |
-|-----------------------------|--------------------------------------------------------|
-| `v_monthly_summary`         | Agregado mensal por categoria, `member_id` e `user_id` |
-| `v_current_month_summary`   | Mesmo que acima, filtrado para o mês corrente          |
+| View                       | Descrição                                              |
+|----------------------------|---------------------------------------------------------|
+| `v_monthly_summary`        | Agregado mensal por categoria, `member_id` e `user_id`  |
+| `v_current_month_summary`  | Mesmo que acima, filtrado para o mês corrente           |
+
+---
+
+## 13. Padrões de Banco de Dados (DBA)
+
+### Autenticação Customizada via Variável de Sessão
+
+O projeto **não usa `auth.uid()`** do Supabase Auth. O padrão adotado propaga o `user_id` via variável de sessão PostgreSQL com escopo de transação:
+
+```sql
+-- 1. Aplicativo define contexto antes de qualquer query
+SELECT exec_with_user_context('<user-uuid>', 'operacao');
+
+-- 2. Internamente: SET LOCAL app.current_user_id = '<user-uuid>'
+-- 3. get_current_user_id() lê e valida o contexto em cada policy
+-- 4. Após COMMIT, contexto é limpo automaticamente (SET LOCAL)
+```
+
+> **Atenção:** a migração `202512090001/add_demo_user_fields.sql` sobreescreveu
+> `get_current_user_id()` com uma versão simplificada que não valida `is_active` nem `deleted_at`.
+> O script `init.sql` (migração `202603090145`) restaura a versão completa.
+> **Sempre garantir que a versão completa esteja ativa após qualquer migração.**
+
+### Padrões de RLS
+
+| Cenário                   | Padrão usado                          | Expresssão de exemplo                                          |
+|---------------------------|---------------------------------------|---------------------------------------------------------------|
+| Recurso próprio           | Comparação direta                    | `user_id = get_current_user_id()`                             |
+| Recurso via tabela pai    | Subquery `EXISTS`                     | `EXISTS (SELECT 1 FROM members WHERE id = member_id AND user_id = get_current_user_id())` |
+| Recurso compartilhado     | Verifica contexto presente            | `get_current_user_id() IS NOT NULL`                           |
+| UPDATE sem transferência  | `USING` + `WITH CHECK` idênticos     | impede mudar `user_id` ou `member_id` para outro dono         |
+
+### Regras de GRANT
+
+- Funções RPC expostas ao cliente → `GRANT EXECUTE ... TO authenticated` (**nunca** `TO anon`)
+- Funções internas / triggers → sem GRANT explícito
+- `exec_with_user_context` e `fn_delete_last_whatsapp_transaction` só para `authenticated`
+- `exec_with_user_context` **nunca** deve ser concedida a `anon` (permitiria impersonar qualquer usuário)
+
+### SECURITY DEFINER com Validação Manual de Ownership
+
+Funções `SECURITY DEFINER` bypassam RLS. Padrão obrigatório:
+
+```sql
+-- 1. Verificar contexto definido
+v_caller_id := get_current_user_id();
+IF v_caller_id IS NULL THEN
+    RAISE EXCEPTION '...' USING HINT = 'Chame exec_with_user_context() antes';
+END IF;
+
+-- 2. Verificar que o recurso pertence ao chamador
+SELECT user_id INTO v_owner FROM members WHERE id = p_member_id;
+IF v_owner IS DISTINCT FROM v_caller_id THEN
+    RAISE EXCEPTION 'Acesso negado'
+        USING HINT = 'CWE-284: verifique se o recurso pertence ao usuário da sessão';
+END IF;
+```
+
+### Bloco de Verificação Pós-Deploy
+
+A seção 11 do `init.sql` contém um bloco `DO $$` que valida automaticamente:
+
+- RLS habilitado em `members`, `transactions`, `goals`
+- Mínimo de 4 políticas por tabela
+- Existem `get_current_user_id()` e `exec_with_user_context()` no schema `public`
+
+Após executar o script, verificar no log do Supabase SQL Editor:
+```
+✅ SUCESSO: RLS configurado corretamente com autenticação customizada
+```

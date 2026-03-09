@@ -71,11 +71,11 @@ export async function handleMessage(msg: Message): Promise<void> {
       break;
 
     case 'summary':
-      await handleSummary(msg);
+      await handleSummary(msg, ctx);
       break;
 
     case 'goals':
-      await handleGoals(msg);
+      await handleGoals(msg, ctx);
       break;
 
     case 'edit':
@@ -148,7 +148,7 @@ async function handleConfirm(msg: Message, ctx: BotContext): Promise<void> {
   }
 
   const tx = ctx.awaitingConfirmation;
-  const result = await saveTransaction(tx, ctx.member.id);
+  const result = await saveTransaction(tx, ctx.member.id, ctx.member.userId);
 
   if (!result) {
     await msg.reply('❌ Erro ao salvar. Tente novamente ou abra o app.');
@@ -173,7 +173,7 @@ async function handleCancel(msg: Message, ctx: BotContext): Promise<void> {
 }
 
 async function handleEdit(msg: Message, ctx: BotContext): Promise<void> {
-  const deleted = await deleteLastTransaction(ctx.member.id);
+  const deleted = await deleteLastTransaction(ctx.member.id, ctx.member.userId);
   if (deleted) {
     ctx.lastTransaction = undefined;
     sessions.set(ctx.phone, ctx);
@@ -183,12 +183,12 @@ async function handleEdit(msg: Message, ctx: BotContext): Promise<void> {
   }
 }
 
-async function handleSummary(msg: Message): Promise<void> {
-  const summary = await getMonthlySummary();
+async function handleSummary(msg: Message, ctx: BotContext): Promise<void> {
+  const summary = await getMonthlySummary(ctx.member.userId);
   await msg.reply(formatSummary(summary));
 }
 
-async function handleGoals(msg: Message): Promise<void> {
-  const goals = await getGoalsSummary();
+async function handleGoals(msg: Message, ctx: BotContext): Promise<void> {
+  const goals = await getGoalsSummary(ctx.member.userId);
   await msg.reply(formatGoals(goals));
 }

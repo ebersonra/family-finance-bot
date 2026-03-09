@@ -4,6 +4,14 @@
 --
 -- Executar no SQL Editor do Supabase ou via psql.
 -- Idempotente: usa IF NOT EXISTS / OR REPLACE.
+--
+-- AUTENTICAÇÃO:
+-- Este script usa AUTENTICAÇÃO CUSTOMIZADA via tabela public.users
+-- (phone + name), NÃO Supabase Auth (auth.uid()).
+-- O user_id autenticado é propagado via variável de sessão PostgreSQL:
+--   SET LOCAL app.current_user_id = 'user-uuid-here';
+-- Use exec_with_user_context(user_id) antes de cada operação.
+-- Referência: OWASP A01:2021 – Broken Access Control (CWE-284)
 -- =============================================================
 
 
@@ -13,6 +21,117 @@
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid() (Postgres < 13)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";  -- uuid_generate_v4() (fallback)
+
+
+-- =============================================================
+-- 0-A. FUNÇÃO AUXILIAR: get_current_user_id()
+--
+--      ATENÇÃO — redefinição intencional e necessária:
+--      A migração 202512090001/add_demo_user_fields.sql sobrescreve
+--      esta função com uma versão simplificada que NÃO valida
+--      is_active nem deleted_at, abrindo brecha para sessões com
+--      IDs de usuários inativos ou deletados.
+--      Esta migração (202603090145) restaura a versão completa,
+--      garantindo o contrato de segurança do projeto.
+--
+--      Padrão de autenticação customizada do projeto:
+--      lê o user_id de app.current_user_id e valida que o usuário
+--      existe, está ativo e não foi deletado. Retorna NULL em caso
+--      de contexto ausente ou inválido, bloqueando o acesso via RLS.
+-- =============================================================
+
+CREATE OR REPLACE FUNCTION get_current_user_id()
+RETURNS UUID AS $$
+DECLARE
+    v_user_id   TEXT;
+    v_user_uuid UUID;
+BEGIN
+    -- Lê o user_id injetado pela camada de aplicação
+    -- OBRIGATÓRIO: SET LOCAL app.current_user_id = 'uuid'; antes de cada query
+    v_user_id := current_setting('app.current_user_id', true);
+
+    -- Contexto ausente → bloqueia acesso via RLS
+    IF v_user_id IS NULL OR v_user_id = '' THEN
+        RETURN NULL;
+    END IF;
+
+    -- Valida existência, status ativo e não deleção
+    -- SEGURANÇA: impede reutilização de IDs de usuários inativos/deletados
+    SELECT id INTO v_user_uuid
+    FROM users
+    WHERE id         = v_user_id::UUID
+      AND is_active  = TRUE
+      AND deleted_at IS NULL;
+
+    RETURN v_user_uuid;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- UUID inválido ou qualquer outro erro → bloqueia acesso
+        RETURN NULL;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
+
+COMMENT ON FUNCTION get_current_user_id() IS
+    'Retorna o UUID do usuário autenticado atual via variável de sessão app.current_user_id. '
+    'Valida que o usuário existe, está ativo (is_active=TRUE) e não foi deletado (deleted_at IS NULL). '
+    'Retorna NULL se o contexto não estiver definido ou o usuário for inválido, bloqueando o acesso RLS.';
+
+
+-- =============================================================
+-- 0-B. FUNÇÃO RPC: exec_with_user_context()
+--      Ponto de entrada seguro para definir o contexto de usuário.
+--      Deve ser chamada pela aplicação ANTES de qualquer query
+--      que dependa de RLS. Valida o usuário e define a sessão.
+--      GRANT apenas para 'authenticated' — nunca para 'anon'.
+-- =============================================================
+
+CREATE OR REPLACE FUNCTION exec_with_user_context(
+  p_user_id  UUID,
+  p_operation TEXT DEFAULT 'query'
+) RETURNS json AS $$
+DECLARE
+  v_user_exists BOOLEAN;
+BEGIN
+    -- Valida que o usuário existe, está ativo e não foi deletado
+    -- SEGURANÇA: impede que user_ids deletados/inativos definam contexto
+    SELECT EXISTS(
+        SELECT 1 FROM users
+        WHERE id         = p_user_id
+          AND is_active  = TRUE
+          AND deleted_at IS NULL
+    ) INTO v_user_exists;
+
+    IF NOT v_user_exists THEN
+        RAISE EXCEPTION 'Usuário inválido ou inativo: %', p_user_id
+            USING HINT = 'O usuário deve existir, estar ativo (is_active=TRUE) e não deletado (deleted_at IS NULL)';
+    END IF;
+
+    -- Define o contexto de usuário com escopo de transação (SET LOCAL)
+    -- Será limpo automaticamente após COMMIT
+    PERFORM set_config('app.current_user_id', p_user_id::text, true);
+
+    RETURN json_build_object(
+        'success',   true,
+        'user_id',   p_user_id,
+        'operation', p_operation,
+        'timestamp', now()
+    );
+
+EXCEPTION
+    WHEN OTHERS THEN
+        RAISE EXCEPTION 'Erro ao definir contexto de usuário: %', SQLERRM
+            USING HINT = 'Verifique se user_id é um UUID válido e o usuário existe no banco';
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+COMMENT ON FUNCTION exec_with_user_context(UUID, TEXT) IS
+    'Define o contexto de usuário autenticado para políticas RLS. '
+    'Valida usuário ativo e não deletado. Deve ser chamada antes de queries que dependam de RLS. '
+    'Escopo de transação: limpo automaticamente após COMMIT.';
+
+-- SEGURANÇA: Nunca conceder a 'anon' — isso permitiria que usuários não
+-- autenticados definissem contexto para qualquer user_id, bypassando a autenticação.
+GRANT EXECUTE ON FUNCTION exec_with_user_context(UUID, TEXT) TO authenticated;
 
 
 -- =============================================================
@@ -183,9 +302,15 @@ COMMENT ON VIEW v_current_month_summary IS
 
 -- =============================================================
 -- 6. ROW LEVEL SECURITY (RLS)
---    O bot usa service_role key → bypassa RLS automaticamente.
---    Policies abaixo protegem acesso via JWT do app mobile/web.
---    Premissa: auth.uid() == users.id == members.user_id
+--
+-- AUTENTICAÇÃO CUSTOMIZADA (padrão do projeto):
+--   • NÃO usa auth.uid() do Supabase Auth.
+--   • Usa get_current_user_id() que lê de app.current_user_id.
+--   • O bot usa service_role key → bypassa RLS automaticamente.
+--   • Clientes web/mobile devem chamar exec_with_user_context()
+--     antes de qualquer operação que dependa de RLS.
+--
+-- Referência: CWE-284 / OWASP A01:2021 – Broken Access Control
 -- =============================================================
 
 -- Habilitar RLS nas tabelas
@@ -193,76 +318,151 @@ ALTER TABLE members      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE goals        ENABLE ROW LEVEL SECURITY;
 
+COMMENT ON TABLE members      IS 'Perfil de bot WhatsApp (1:1 com public.users). RLS habilitado — cada usuário acessa apenas seu próprio registro.';
+COMMENT ON TABLE transactions IS 'Transações financeiras da família. RLS habilitado — acesso filtrado via member_id → user_id.';
+COMMENT ON TABLE goals        IS 'Metas financeiras da família. RLS habilitado — visíveis a qualquer membro autenticado.';
+
 -- ── members ──────────────────────────────────────────────────
--- Cada usuário vê apenas seu próprio perfil de membro.
+-- Cada usuário acessa apenas seu próprio perfil de membro.
+-- Comparação direta user_id = get_current_user_id() (mesmo padrão
+-- de shopping_lists, onde o dono é identificado por user_id na tabela).
 DROP POLICY IF EXISTS members_select_own ON members;
 CREATE POLICY members_select_own ON members
-  FOR SELECT USING (user_id = auth.uid());
+    FOR SELECT
+    USING (user_id = get_current_user_id());
+
+COMMENT ON POLICY members_select_own ON members IS
+    'SELECT: usuário só visualiza seu próprio perfil (user_id = get_current_user_id())';
 
 DROP POLICY IF EXISTS members_insert_own ON members;
 CREATE POLICY members_insert_own ON members
-  FOR INSERT WITH CHECK (user_id = auth.uid());
+    FOR INSERT
+    WITH CHECK (user_id = get_current_user_id());
+
+COMMENT ON POLICY members_insert_own ON members IS
+    'INSERT: usuário só cria perfil com seu próprio user_id';
 
 DROP POLICY IF EXISTS members_update_own ON members;
 CREATE POLICY members_update_own ON members
-  FOR UPDATE USING (user_id = auth.uid());
+    FOR UPDATE
+    USING     (user_id = get_current_user_id())
+    WITH CHECK(user_id = get_current_user_id());   -- impede transferência de ownership
+
+COMMENT ON POLICY members_update_own ON members IS
+    'UPDATE: usuário só edita seu próprio perfil e não pode transferir ownership';
 
 DROP POLICY IF EXISTS members_delete_own ON members;
 CREATE POLICY members_delete_own ON members
-  FOR DELETE USING (user_id = auth.uid());
+    FOR DELETE
+    USING (user_id = get_current_user_id());
+
+COMMENT ON POLICY members_delete_own ON members IS
+    'DELETE: usuário só remove seu próprio perfil';
 
 -- ── transactions ─────────────────────────────────────────────
--- Usuário vê/gerencia somente suas próprias transações
--- (via member_id → members.user_id = auth.uid()).
+-- Transações são vinculadas ao usuário via member_id → members.user_id.
+-- Padrão EXISTS (mesmo padrão de shopping_list_items, que verifica
+-- ownership via tabela pai com subquery EXISTS).
 DROP POLICY IF EXISTS transactions_select_own ON transactions;
 CREATE POLICY transactions_select_own ON transactions
-  FOR SELECT USING (
-    member_id IN (
-      SELECT id FROM members WHERE user_id = auth.uid()
-    )
-  );
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM members
+            WHERE members.id      = transactions.member_id
+              AND members.user_id = get_current_user_id()
+        )
+    );
+
+COMMENT ON POLICY transactions_select_own ON transactions IS
+    'SELECT: usuário só visualiza transações de membros que lhe pertencem (EXISTS via members)';
 
 DROP POLICY IF EXISTS transactions_insert_own ON transactions;
 CREATE POLICY transactions_insert_own ON transactions
-  FOR INSERT WITH CHECK (
-    member_id IN (
-      SELECT id FROM members WHERE user_id = auth.uid()
-    )
-  );
+    FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM members
+            WHERE members.id      = transactions.member_id
+              AND members.user_id = get_current_user_id()
+        )
+    );
+
+COMMENT ON POLICY transactions_insert_own ON transactions IS
+    'INSERT: usuário só lança transações em membros que lhe pertencem';
 
 DROP POLICY IF EXISTS transactions_update_own ON transactions;
 CREATE POLICY transactions_update_own ON transactions
-  FOR UPDATE USING (
-    member_id IN (
-      SELECT id FROM members WHERE user_id = auth.uid()
+    FOR UPDATE
+    USING (
+        EXISTS (
+            SELECT 1 FROM members
+            WHERE members.id      = transactions.member_id
+              AND members.user_id = get_current_user_id()
+        )
     )
-  );
+    WITH CHECK (
+        -- Após update, member_id deve continuar pertencendo ao mesmo usuário
+        EXISTS (
+            SELECT 1 FROM members
+            WHERE members.id      = transactions.member_id
+              AND members.user_id = get_current_user_id()
+        )
+    );
+
+COMMENT ON POLICY transactions_update_own ON transactions IS
+    'UPDATE: usuário só edita suas transações; member_id não pode ser alterado para outro usuário';
 
 DROP POLICY IF EXISTS transactions_delete_own ON transactions;
 CREATE POLICY transactions_delete_own ON transactions
-  FOR DELETE USING (
-    member_id IN (
-      SELECT id FROM members WHERE user_id = auth.uid()
-    )
-  );
+    FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM members
+            WHERE members.id      = transactions.member_id
+              AND members.user_id = get_current_user_id()
+        )
+    );
+
+COMMENT ON POLICY transactions_delete_own ON transactions IS
+    'DELETE: usuário só remove suas próprias transações';
 
 -- ── goals (compartilhado pela família) ───────────────────────
--- Todos os membros autenticados veem e gerenciam as metas.
+-- Metas são visíveis e gerenciáveis por qualquer membro autenticado.
+-- get_current_user_id() IS NOT NULL garante que o contexto foi definido
+-- (padrão do projeto para recursos compartilhados).
 DROP POLICY IF EXISTS goals_select_authenticated ON goals;
 CREATE POLICY goals_select_authenticated ON goals
-  FOR SELECT USING (auth.uid() IS NOT NULL);
+    FOR SELECT
+    USING (get_current_user_id() IS NOT NULL);
+
+COMMENT ON POLICY goals_select_authenticated ON goals IS
+    'SELECT: qualquer membro com contexto autenticado pode visualizar metas da família';
 
 DROP POLICY IF EXISTS goals_insert_authenticated ON goals;
 CREATE POLICY goals_insert_authenticated ON goals
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
+    FOR INSERT
+    WITH CHECK (get_current_user_id() IS NOT NULL);
+
+COMMENT ON POLICY goals_insert_authenticated ON goals IS
+    'INSERT: qualquer membro autenticado pode criar metas';
 
 DROP POLICY IF EXISTS goals_update_authenticated ON goals;
 CREATE POLICY goals_update_authenticated ON goals
-  FOR UPDATE USING (auth.uid() IS NOT NULL);
+    FOR UPDATE
+    USING     (get_current_user_id() IS NOT NULL)
+    WITH CHECK(get_current_user_id() IS NOT NULL);
+
+COMMENT ON POLICY goals_update_authenticated ON goals IS
+    'UPDATE: qualquer membro autenticado pode atualizar metas';
 
 DROP POLICY IF EXISTS goals_delete_authenticated ON goals;
 CREATE POLICY goals_delete_authenticated ON goals
-  FOR DELETE USING (auth.uid() IS NOT NULL);
+    FOR DELETE
+    USING (get_current_user_id() IS NOT NULL);
+
+COMMENT ON POLICY goals_delete_authenticated ON goals IS
+    'DELETE: qualquer membro autenticado pode remover metas';
 
 
 -- =============================================================
@@ -332,8 +532,30 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-  v_id UUID;
+  v_id           UUID;
+  v_caller_id    UUID;
+  v_member_owner UUID;
 BEGIN
+  -- SEGURANÇA: função é SECURITY DEFINER (bypassa RLS).
+  -- Validamos manualmente se o chamador é dono do membro informado.
+  v_caller_id := get_current_user_id();
+
+  IF v_caller_id IS NULL THEN
+    RAISE EXCEPTION 'Contexto de usuário não definido. Chame exec_with_user_context() antes.'
+        USING HINT = 'SET LOCAL app.current_user_id deve ser definido na transação corrente';
+  END IF;
+
+  -- Verifica que p_member_id pertence ao usuário autenticado
+  SELECT user_id INTO v_member_owner
+  FROM members
+  WHERE id = p_member_id;
+
+  IF v_member_owner IS DISTINCT FROM v_caller_id THEN
+    RAISE EXCEPTION 'Acesso negado: o membro % não pertence ao usuário autenticado', p_member_id
+        USING HINT = 'CWE-284: verifique se o member_id corresponde ao usuário da sessão';
+  END IF;
+
+  -- Busca e remove o último lançamento WhatsApp do membro
   SELECT id INTO v_id
   FROM transactions
   WHERE member_id = p_member_id
@@ -351,7 +573,12 @@ END;
 $$;
 
 COMMENT ON FUNCTION fn_delete_last_whatsapp_transaction IS
-  'Remove o último lançamento via WhatsApp de um membro. Retorna TRUE se removeu.';
+  'Remove o último lançamento via WhatsApp de um membro. '
+  'SECURITY DEFINER: valida manualmente ownership via get_current_user_id(). '
+  'Requer exec_with_user_context() antes da chamada. Retorna TRUE se removeu.';
+
+-- Apenas usuários autenticados podem chamar esta função
+GRANT EXECUTE ON FUNCTION fn_delete_last_whatsapp_transaction(UUID) TO authenticated;
 
 
 -- =============================================================
@@ -384,28 +611,105 @@ AS $$
 $$;
 
 COMMENT ON FUNCTION fn_monthly_summary IS
-  'Resumo financeiro mensal com totais e breakdown por categoria.';
+  'Resumo financeiro mensal com totais e breakdown por categoria. '
+  'ATENÇÃO: função STABLE sem SECURITY DEFINER → respeita RLS. '
+  'Retorna apenas transações do usuário cujo contexto estiver definido via app.current_user_id.';
+
+-- Apenas usuários autenticados podem chamar esta função
+GRANT EXECUTE ON FUNCTION fn_monthly_summary(DATE) TO authenticated;
+
+
+-- =============================================================
+-- 11. VERIFICAÇÃO PÓS-DEPLOY
+--     Valida que RLS foi habilitado e políticas foram criadas.
+--     Executar após aplicar o script para confirmar a configuração.
+-- =============================================================
+
+DO $$
+DECLARE
+    v_members_rls      BOOLEAN;
+    v_transactions_rls BOOLEAN;
+    v_goals_rls        BOOLEAN;
+    v_count_members    INTEGER;
+    v_count_trans      INTEGER;
+    v_count_goals      INTEGER;
+    v_fn_current_user  INTEGER;
+    v_fn_exec_context  INTEGER;
+BEGIN
+    -- Verifica RLS habilitado
+    SELECT relrowsecurity INTO v_members_rls      FROM pg_class WHERE relname = 'members';
+    SELECT relrowsecurity INTO v_transactions_rls FROM pg_class WHERE relname = 'transactions';
+    SELECT relrowsecurity INTO v_goals_rls        FROM pg_class WHERE relname = 'goals';
+
+    -- Conta políticas criadas
+    SELECT COUNT(*) INTO v_count_members FROM pg_policies WHERE tablename = 'members';
+    SELECT COUNT(*) INTO v_count_trans   FROM pg_policies WHERE tablename = 'transactions';
+    SELECT COUNT(*) INTO v_count_goals   FROM pg_policies WHERE tablename = 'goals';
+
+    -- Verifica funções auxiliares
+    SELECT COUNT(*) INTO v_fn_current_user
+    FROM information_schema.routines
+    WHERE routine_schema = 'public' AND routine_name = 'get_current_user_id';
+
+    SELECT COUNT(*) INTO v_fn_exec_context
+    FROM information_schema.routines
+    WHERE routine_schema = 'public' AND routine_name = 'exec_with_user_context';
+
+    RAISE NOTICE '============================================================';
+    RAISE NOTICE 'FamilyFinanceBot · Verificação de RLS';
+    RAISE NOTICE '------------------------------------------------------------';
+    RAISE NOTICE 'RLS members:      % | políticas: %', v_members_rls,      v_count_members;
+    RAISE NOTICE 'RLS transactions: % | políticas: %', v_transactions_rls, v_count_trans;
+    RAISE NOTICE 'RLS goals:        % | políticas: %', v_goals_rls,        v_count_goals;
+    RAISE NOTICE 'fn get_current_user_id:    %', CASE WHEN v_fn_current_user  > 0 THEN '✅ OK' ELSE '❌ MISSING' END;
+    RAISE NOTICE 'fn exec_with_user_context: %', CASE WHEN v_fn_exec_context  > 0 THEN '✅ OK' ELSE '❌ MISSING' END;
+    RAISE NOTICE '------------------------------------------------------------';
+
+    IF v_members_rls AND v_transactions_rls AND v_goals_rls
+       AND v_count_members >= 4 AND v_count_trans >= 4 AND v_count_goals >= 4
+       AND v_fn_current_user > 0 AND v_fn_exec_context > 0
+    THEN
+        RAISE NOTICE '✅ SUCESSO: RLS configurado corretamente com autenticação customizada';
+    ELSE
+        RAISE WARNING '⚠️  ATENÇÃO: Configuração de RLS pode estar incompleta — revise o log acima';
+    END IF;
+
+    RAISE NOTICE '============================================================';
+END $$;
 
 
 -- =============================================================
 -- DIAGRAMA DE RELACIONAMENTOS
 -- =============================================================
 --
---  public.users (existente no Supabase)
+--  public.users  (existente no projeto — autenticação customizada)
 --       │
---       │ 1:1  (user_id UNIQUE)
+--       │ 1:1  (user_id UNIQUE, is_active, deleted_at)
 --       ▼
---    members
+--    members  ◄── RLS: user_id = get_current_user_id()
 --       │
---       │ 1:N  (member_id FK)
+--       │ 1:N  (member_id FK → CASCADE)
 --       ▼
---  transactions
+--  transactions  ◄── RLS: EXISTS(members WHERE user_id = get_current_user_id())
 --
 --    members
 --       │
---       │ 1:N  (created_by_member_id FK, nullable)
+--       │ 1:N  (created_by_member_id FK, nullable → SET NULL)
 --       ▼
---     goals  ← compartilhado por todos os membros da família
+--     goals  ◄── RLS: get_current_user_id() IS NOT NULL (compartilhado)
+--
+-- FLUXO DE AUTENTICAÇÃO CUSTOMIZADA:
+--   1. Aplicação autentica usuário via tabela public.users
+--   2. Chama exec_with_user_context(user_id) → SET LOCAL app.current_user_id
+--   3. get_current_user_id() valida e retorna o UUID (ou NULL se inválido)
+--   4. Políticas RLS usam get_current_user_id() em vez de auth.uid()
+--   5. Bot WhatsApp usa service_role key → bypassa RLS automaticamente
+--
+-- FUNÇÕES SEGURAS (SECURITY DEFINER):
+--   • get_current_user_id()                   → validação de sessão
+--   • exec_with_user_context(UUID, TEXT)       → definição de contexto
+--   • fn_sync_member_from_user()              → trigger de sincronização
+--   • fn_delete_last_whatsapp_transaction(UUID)→ valida ownership manualmente
 --
 -- =============================================================
 -- FIM DO SCRIPT

@@ -1,157 +1,126 @@
 // ─────────────────────────────────────────────
-// FamilyFinanceBot · Supabase Service
+// FamilyFinanceBot · Data Service (API Layer)
+// Substituição do cliente Supabase direto pelo
+// consumo dos endpoints REST da Bargainly API.
 // ─────────────────────────────────────────────
 
-import { createClient } from '@supabase/supabase-js';
-import type { ParsedTransaction, Member } from '../types';
+import type { Member, ParsedTransaction, FamilyGoal, ApiMonthlySummary } from '../types';
+import {
+  findUserByPhone,
+  getMemberProfile,
+  createTransaction,
+  deleteLastWhatsAppTransaction,
+  getMonthlySummary as apiGetMonthlySummary,
+  getGoals,
+} from './api';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-);
+// Aliases de tipo exportados para compatibilidade com formatters
+export type { ApiMonthlySummary as MonthlySummary };
+export type { FamilyGoal as GoalSummary };
 
 // ── Membros ───────────────────────────────────────
 
 /**
- * Busca o membro pelo número de telefone.
- * Retorna null se o número não estiver cadastrado.
+ * Busca o membro pelo número de telefone consultando:
+ *  1. POST /user-auth (action: getOrCreate) → obtém o user_id
+ *  2. GET  /family-finance-member?user_id=  → obtém o perfil do membro
+ *
+ * Retorna null se o usuário não existir ou não tiver perfil de finanças.
+ *
+ * @security Nunca cria usuário sem intenção explícita do app principal.
+ *           O bot trabalha apenas com usuários já registrados.
  */
 export async function getMemberByPhone(phone: string): Promise<Member | null> {
-  const { data, error } = await supabase
-    .from('members')
-    .select('id, name, phone')
-    .eq('phone', phone)
-    .single();
+  // Passo 1: Buscar usuário autenticado pelo telefone
+  const user = await findUserByPhone(phone);
+  if (!user) return null;
 
-  if (error || !data) return null;
-  return data as Member;
+  // Passo 2: Buscar perfil de finanças familiares
+  const profile = await getMemberProfile(user.id);
+  if (!profile) return null;
+
+  return {
+    id: profile.id,         // ID do perfil family-finance-member
+    userId: user.id,        // UUID do usuário autenticado
+    name: profile.name,
+    phone: profile.phone,
+  };
 }
 
 // ── Transações ────────────────────────────────────
 
 /**
- * Salva uma transação no banco de dados.
+ * Salva uma transação via POST /family-finance-transactions.
+ *
+ * @param tx       Transação parseada pelo NLP
+ * @param memberId ID do perfil family-finance-member
+ * @param userId   UUID do usuário autenticado
  */
 export async function saveTransaction(
   tx: ParsedTransaction,
   memberId: string,
+  userId: string,
 ): Promise<{ id: string } | null> {
-  const { data, error } = await supabase
-    .from('transactions')
-    .insert({
+  try {
+    const result = await createTransaction({
+      user_id: userId,
+      member_id: memberId,
       name: tx.name,
       amount: tx.amount,
       category: tx.category,
-      member_id: memberId,
       date: tx.date,
-      source: 'whatsapp',       // identifica a origem do lançamento
-    })
-    .select('id')
-    .single();
-
-  if (error) {
-    console.error('[Supabase] Erro ao salvar transação:', error.message);
+      source: 'whatsapp',
+    });
+    return { id: result.id };
+  } catch (err) {
+    console.error('[API] Erro ao salvar transação:', (err as Error).message);
     return null;
   }
-
-  return data;
 }
 
 /**
- * Remove o último lançamento feito via WhatsApp por um membro.
- * Usado no comando /editar.
+ * Remove o último lançamento WhatsApp via
+ * DELETE /family-finance-delete-last-transaction.
+ *
+ * @param memberId ID do perfil family-finance-member
+ * @param userId   UUID do usuário autenticado
  */
-export async function deleteLastTransaction(memberId: string): Promise<boolean> {
-  const { data } = await supabase
-    .from('transactions')
-    .select('id')
-    .eq('member_id', memberId)
-    .eq('source', 'whatsapp')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single();
-
-  if (!data) return false;
-
-  const { error } = await supabase
-    .from('transactions')
-    .delete()
-    .eq('id', data.id);
-
-  return !error;
+export async function deleteLastTransaction(
+  memberId: string,
+  userId: string,
+): Promise<boolean> {
+  try {
+    const result = await deleteLastWhatsAppTransaction(userId, memberId);
+    return result.deleted;
+  } catch (err) {
+    console.error('[API] Erro ao deletar última transação:', (err as Error).message);
+    return false;
+  }
 }
 
 // ── Resumo mensal ─────────────────────────────────
 
-export interface MonthlySummary {
-  totalIncome: number;
-  totalExpenses: number;
-  balance: number;
-  topCategories: { category: string; total: number }[];
-}
-
 /**
- * Retorna o resumo financeiro do mês atual da família.
+ * Retorna o resumo financeiro mensal via GET /family-finance-summary.
+ *
+ * @param userId UUID do usuário autenticado
+ * @param month  Mês no formato YYYY-MM (padrão: mês atual)
  */
-export async function getMonthlySummary(): Promise<MonthlySummary> {
-  const now = new Date();
-  const startOfMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-
-  const { data } = await supabase
-    .from('transactions')
-    .select('amount, category')
-    .gte('date', startOfMonth);
-
-  const transactions = data ?? [];
-
-  const totalIncome = transactions
-    .filter((t) => t.amount > 0)
-    .reduce((a, t) => a + t.amount, 0);
-
-  const totalExpenses = transactions
-    .filter((t) => t.amount < 0)
-    .reduce((a, t) => a + Math.abs(t.amount), 0);
-
-  // Agrupa despesas por categoria
-  const categoryMap: Record<string, number> = {};
-  for (const t of transactions.filter((t) => t.amount < 0)) {
-    categoryMap[t.category] = (categoryMap[t.category] ?? 0) + Math.abs(t.amount);
-  }
-
-  const topCategories = Object.entries(categoryMap)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([category, total]) => ({ category, total }));
-
-  return {
-    totalIncome,
-    totalExpenses,
-    balance: totalIncome - totalExpenses,
-    topCategories,
-  };
+export async function getMonthlySummary(
+  userId: string,
+  month?: string,
+): Promise<ApiMonthlySummary> {
+  const currentMonth = month ?? new Date().toISOString().slice(0, 7);
+  return apiGetMonthlySummary(userId, currentMonth);
 }
 
 // ── Metas ─────────────────────────────────────────
 
-export interface GoalSummary {
-  label: string;
-  emoji?: string;
-  saved: number;
-  target: number;
-  pct: number;
-}
-
 /**
- * Retorna todas as metas da família com percentual de progresso.
+ * Retorna todas as metas da família via GET /family-finance-goals.
+ *
+ * @param userId UUID do usuário autenticado
  */
-export async function getGoalsSummary(): Promise<GoalSummary[]> {
-  const { data } = await supabase
-    .from('goals')
-    .select('label, emoji, saved, target')
-    .order('created_at', { ascending: true });
-
-  return (data ?? []).map((g) => ({
-    ...g,
-    pct: Math.min(100, Math.round((g.saved / g.target) * 100)),
-  }));
+export async function getGoalsSummary(userId: string): Promise<FamilyGoal[]> {
+  return getGoals(userId);
 }

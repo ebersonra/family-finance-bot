@@ -1,0 +1,5634 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Bargainly Market App – API",
+    "description": "Contratos REST expostos pelo `SecureAPI` client wrapper (`src/utils/secureApi.js`). Todas as chamadas são roteadas via **Netlify Functions** (Backend Proxy Pattern) – nenhuma credencial é exposta no cliente.\n\n> **Base URL (Web):** `/api` → redirecionado via `netlify.toml` para `/.netlify/functions`\n>\n> **Base URL (Mobile / Capacitor):** `https://app.bargainly.com.br/api`\n\n### Segurança\n- **CWE-522** – Zero exposição de credenciais no cliente\n- **OWASP A05:2021** – CORS centralizado via `wrapHandler` middleware\n- **Rate Limiting** – Redis (3 req/15 min para OTP, 5 tentativas/15 min para verificação)\n- **Audit Logging** – Todas as ações críticas auditadas",
+    "version": "2.0.0",
+    "contact": {
+      "name": "Sentinel Coder",
+      "url": "https://app.bargainly.com.br"
+    },
+    "license": {
+      "name": "Proprietary"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://app.bargainly.com.br/api",
+      "description": "Produção"
+    },
+    {
+      "url": "http://localhost:8888/api",
+      "description": "Desenvolvimento local (netlify dev)"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Markets",
+      "description": "Gerenciamento de mercados e supermercados"
+    },
+    {
+      "name": "Products",
+      "description": "Catálogo de produtos e busca por GTIN/código de barras"
+    },
+    {
+      "name": "Users",
+      "description": "Autenticação, criação e atualização de perfis de usuários"
+    },
+    {
+      "name": "Authentication",
+      "description": "Fluxo OTP por e-mail (Phase 1 Security)"
+    },
+    {
+      "name": "Shopping Lists",
+      "description": "CRUD de listas de compras e seus itens"
+    },
+    {
+      "name": "Address",
+      "description": "Consulta de endereço por CEP via ViaCEP (proxy seguro)"
+    },
+    {
+      "name": "Feature Flags",
+      "description": "Runtime feature flags consumidas pelo mobile app sem necessidade de rebuild ou redeploy"
+    },
+    {
+      "name": "FamilyFinance",
+      "description": "Bot de finanças familiares via WhatsApp. Gerencia membros, transações, metas e resumo mensal. Requer exec_with_user_context (RLS) para todas as operações."
+    }
+  ],
+  "paths": {
+    "/add-shopping-list-item": {
+      "post": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "addShoppingListItem",
+        "summary": "Adicionar item à lista de compras",
+        "description": "Cria um novo item em uma lista existente. Utilizado por `SecureAPI.addShoppingListItem()`.",
+        "parameters": [
+          {
+            "name": "listId",
+            "in": "query",
+            "required": true,
+            "description": "UUID da lista",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingListItemRequest",
+                "properties": {
+                  "product_name": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "category": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "quantity": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "unit": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "unit_price": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "notes": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              },
+              "example": {
+                "name": "Arroz",
+                "quantity": 2,
+                "unit": "kg",
+                "price": 5.99,
+                "category": "Grãos",
+                "checked": false,
+                "gtin": "7891234000015"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Item criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingListItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/create-category": {
+      "post": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "createCategory",
+        "summary": "Create Category",
+        "description": "Handler for `/create-category`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/create-market": {
+      "post": {
+        "tags": [
+          "Markets"
+        ],
+        "operationId": "createMarket",
+        "summary": "Create Market",
+        "description": "Handler for `/create-market`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "place_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "latitude": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "longitude": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "rating": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/create-payment-method": {
+      "post": {
+        "tags": [
+          "Payments"
+        ],
+        "operationId": "createPaymentMethod",
+        "summary": "Create Payment Method",
+        "description": "Handler for `/create-payment-method`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "type"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "credit_card",
+                      "debit_card",
+                      "pix",
+                      "cash",
+                      "other"
+                    ]
+                  },
+                  "label": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "example": {
+                "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                "type": "pix",
+                "label": "Nubank PIX"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/create-product": {
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "createProduct",
+        "summary": "Create Product",
+        "description": "Handler for `/create-product`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/create-shopping-list": {
+      "post": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "createShoppingList",
+        "summary": "Create Shopping List",
+        "description": "Creates a new shopping list. Items are **optional** at creation time — you can create an empty list and add items later via `POST /add-shopping-list-item`. A list can hold at most 100 items.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "title",
+                  "shopping_date"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID of the owner"
+                  },
+                  "title": {
+                    "type": "string",
+                    "example": "Compras da semana"
+                  },
+                  "description": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "shopping_date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-03-01"
+                  },
+                  "market_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "items": {
+                    "type": "array",
+                    "description": "Optional initial items. Can be empty — items can be added later.",
+                    "maxItems": 100,
+                    "items": {
+                      "$ref": "#/components/schemas/ShoppingListItemInput"
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "empty_list": {
+                  "summary": "Create list without items (recommended SRE pattern)",
+                  "value": {
+                    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "title": "Lista de mercado",
+                    "shopping_date": "2026-03-01"
+                  }
+                },
+                "list_with_items": {
+                  "summary": "Create list with initial items",
+                  "value": {
+                    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "title": "Lista de mercado",
+                    "shopping_date": "2026-03-01",
+                    "items": [
+                      {
+                        "product_name": "Arroz",
+                        "quantity": 2,
+                        "unit": "kg",
+                        "unit_price": 5.99,
+                        "category": "Grãos"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delete-market": {
+      "delete": {
+        "tags": [
+          "Markets"
+        ],
+        "operationId": "deleteMarket",
+        "summary": "Delete Market",
+        "description": "Netlify Function to delete a market (soft delete) Marks a market as deleted without removing from database No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/delete-product": {
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "deleteProduct",
+        "summary": "Delete Product",
+        "description": "Delete Product API Netlify Function to soft delete a product Security: Soft delete (sets deleted_at), maintains data integrity, prevents SQL injection No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "user_id"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              },
+              "example": {
+                "product_id": "550e8400-e29b-41d4-a716-446655440000",
+                "user_id": "661e8400-e29b-41d4-a716-446655440001"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delete-shopping-list": {
+      "delete": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "deleteShoppingList",
+        "summary": "Delete Shopping List",
+        "description": "Delete Shopping List Netlify Function to soft delete a shopping list No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "user_id"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              },
+              "example": {
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "user_id": "661e8400-e29b-41d4-a716-446655440001"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/find-market": {
+      "post": {
+        "tags": [
+          "Markets"
+        ],
+        "operationId": "findMarket",
+        "summary": "Find Market",
+        "description": "Find Market - Netlify Function Find market by place_id or name Architecture: MVC Pattern API → Controller → Service → Repository → Database Security: - ✅ Backend Proxy Pattern (credentials server-side only) - ✅ Input validation in controller layer - ✅ SQL injection prevention via parameterized queries @version 2.0.0 (Refactored to follow MVC) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "place_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-address-by-cep": {
+      "get": {
+        "tags": [
+          "Address"
+        ],
+        "operationId": "getAddressByCep",
+        "summary": "Consultar endereço por CEP",
+        "description": "Retorna o endereço completo (logradouro, bairro, cidade, UF, estado, IBGE, DDD) a partir de um CEP brasileiro.\n\nProxy seguro para a API pública **ViaCEP** (`https://viacep.com.br`).\nAceita CEP com ou sem máscara (ex: `01310-100` ou `01310100`).\n\n### Segurança\n- **CWE-20** – Validação de formato (8 dígitos) antes da chamada externa\n- **CWE-209** – Mensagens de erro sanitizadas, sem stack trace\n- **OWASP A05:2021** – CORS centralizado via `wrapHandler`\n\n### Arquitetura\n`GET /api/get-address-by-cep` → `wrapHandler` → `addressController` → `viaCepService` → ViaCEP API",
+        "parameters": [
+          {
+            "name": "cep",
+            "in": "query",
+            "required": true,
+            "description": "CEP brasileiro com ou sem máscara. Ex: `01310100` ou `01310-100`.",
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{5}-?\\d{3}$",
+              "example": "01310100"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Endereço encontrado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressByCepResponse"
+                },
+                "example": {
+                  "cep": "01310-100",
+                  "logradouro": "Avenida Paulista",
+                  "complemento": "de 1 a 610 - lado par",
+                  "bairro": "Bela Vista",
+                  "cidade": "São Paulo",
+                  "uf": "SP",
+                  "estado": "São Paulo",
+                  "ibge": "3550308",
+                  "ddd": "11"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CEP ausente ou com formato inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "missing": {
+                    "summary": "CEP não informado",
+                    "value": {
+                      "error": "Parâmetro \"cep\" é obrigatório."
+                    }
+                  },
+                  "invalid": {
+                    "summary": "Formato inválido",
+                    "value": {
+                      "error": "CEP inválido. Informe exatamente 8 dígitos numéricos."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "CEP não encontrado na base ViaCEP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "CEP não encontrado."
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Método HTTP não permitido (apenas GET)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method Not Allowed"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          },
+          "502": {
+            "description": "Erro ao comunicar com a API ViaCEP",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Erro ao consultar serviço de CEP."
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Serviço ViaCEP indisponível",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Serviço de CEP indisponível. Tente novamente mais tarde."
+                }
+              }
+            }
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-02"
+      }
+    },
+    "/get-all-markets": {
+      "get": {
+        "tags": [
+          "Markets"
+        ],
+        "operationId": "getMarkets",
+        "summary": "Listar todos os mercados ativos",
+        "description": "Retorna todos os mercados cadastrados e ativos. Utilizado por `SecureAPI.getMarkets()`.",
+        "responses": {
+          "200": {
+            "description": "Lista de mercados retornada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketsListResponse"
+                },
+                "example": {
+                  "success": true,
+                  "data": [
+                    {
+                      "id": "550e8400-e29b-41d4-a716-446655440000",
+                      "name": "Supermercado Extra",
+                      "address": "Rua das Flores, 100",
+                      "latitude": -23.5505,
+                      "longitude": -46.6333,
+                      "place_id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+                      "rating": 4.2
+                    }
+                  ],
+                  "count": 1
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-categories-by-user": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "getCategoriesByUser",
+        "summary": "Get Categories By User",
+        "description": "Get Categories By User API Endpoint Uses MVC pattern: Controller → Service → Repository No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-category-keywords": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "operationId": "getCategoryKeywords",
+        "summary": "Get Category Keywords",
+        "description": "Get Category Keywords by User Netlify Function to retrieve category keywords for Hybrid Matcher @security UUID validation, RLS enforcement via exec_with_user_context @performance Single optimized RPC query, Edge + Client caching No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-company-by-cnpj": {
+      "get": {
+        "tags": [
+          "Integration"
+        ],
+        "operationId": "getCompanyByCnpj",
+        "summary": "Get Company By Cnpj",
+        "description": "Get Company by CNPJ API Endpoint Architecture: MVC Pattern API → Controller → Service → Repository → Database Fetches company data by CNPJ with caching strategy GET /.netlify/functions/get-company-by-cnpj?cnpj=<cnpj> External API: BrasilAPI (https://brasilapi.com.br) Cache: company_cache table (24h expiration) @version 2.0.0 (Refactored to follow MVC) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "cnpj",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-dashboard-metrics": {
+      "get": {
+        "tags": [
+          "Financial"
+        ],
+        "operationId": "getDashboardMetrics",
+        "summary": "Get Dashboard Metrics",
+        "description": "Get Dashboard Metrics API Handler Endpoint: /api/get-dashboard-metrics Method: GET Query Parameters: - user_id (required): UUID of the user Returns dashboard metrics including: - Shopping lists status (completed/total) - Cart total value - Collaborators - Integration status Security: Backend Proxy Pattern (Supabase credentials server-side only) Architecture: MVC Pattern (Controller → Service → Repository) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-feature-flags": {
+      "get": {
+        "tags": [
+          "Feature Flags"
+        ],
+        "operationId": "getFeatureFlags",
+        "summary": "Obter feature flags em runtime",
+        "description": "Endpoint público consumido pelo mobile app para obter o estado das feature flags em runtime, sem necessidade de rebuild.\n\nSuporte a dois modos:\n- **Sem parâmetro** → retorna todas as flags (`{ flags: { [key]: boolean }, cachedAt: ISO8601 }`)\n- **Com `?key=<k>`** → retorna o valor de uma flag específica (`{ key, enabled }`).\n\nAs flags são armazenadas no Supabase (`feature_flags`) e cacheadas em memória por **60 segundos**. Toggling via Supabase Table Editor, sem redeploy.\n\n### Segurança\n- **CWE-20** – Sanitização do query param `key` (regex `^[a-z0-9_-]+$`)\n- **CWE-209** – Erros retornam HTTP 422 com mensagem genérica (sem stack trace)\n- **OWASP A05:2021** – CORS centralizado via `wrapHandler`\n\n### Arquitetura\n`GET /api/get-feature-flags` → `wrapHandler` → `featureFlagController` → `featureFlagService` → `featureFlagRepository` → Supabase",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "description": "Chave da flag (ex: `reviewer_bypass`). Apenas letras minúsculas, números, underscore e hífen. Omita para retornar todas as flags.",
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9_-]+$",
+              "example": "reviewer_bypass"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Flags retornadas com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "title": "Todas as flags",
+                      "type": "object",
+                      "properties": {
+                        "flags": {
+                          "type": "object",
+                          "description": "Mapa de flags: chave → boolean",
+                          "additionalProperties": {
+                            "type": "boolean"
+                          },
+                          "example": {
+                            "reviewer_bypass": false,
+                            "new_ui": true
+                          }
+                        },
+                        "cachedAt": {
+                          "type": "string",
+                          "format": "date-time",
+                          "description": "ISO 8601 timestamp da última atualização do cache",
+                          "example": "2026-03-04T12:00:00.000Z"
+                        }
+                      },
+                      "required": [
+                        "flags",
+                        "cachedAt"
+                      ]
+                    },
+                    {
+                      "title": "Flag específica",
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string",
+                          "description": "Chave normalizada da flag",
+                          "example": "reviewer_bypass"
+                        },
+                        "enabled": {
+                          "type": "boolean",
+                          "description": "Estado atual da flag",
+                          "example": false
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "enabled"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Método não permitido — apenas GET é aceito",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Parâmetro `key` inválido (formato não permitido ou ausente quando esperado). Mensagem genérica por OPSEC (CWE-209).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Serviço indisponível, tente mais tarde."
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-04"
+      }
+    },
+    "/get-financial-by-categories": {
+      "get": {
+        "tags": [
+          "Financial"
+        ],
+        "operationId": "getFinancialByCategories",
+        "summary": "Get Financial By Categories",
+        "description": "Get Financial Data by Categories API Endpoint Retrieves financial breakdown by product categories with optional filters GET /.netlify/functions/get-financial-by-categories?user_id=<uuid>&month=<YYYY-MM>&category=<string>&market_id=<uuid> Query Parameters: - user_id (required): User UUID - month (optional): Filter by month in YYYY-MM format - category (optional): Filter by specific category name - market_id (optional): Filter by market UUID - limit (optional): Maximum results (default: 100, max: 1000) - offset (optional): Pagination offset (default: 0) SECURITY IMPLEMENTATION: - UUID Validation: All UUID inputs validated via regex (CWE-89) - Month Format Validation: YYYY-MM regex prevents injection - Category Sanitization: Length limit + encoding (XSS prevention) - Explicit User Filtering: All queries filtered by validated user_id (CWE-284) - Limit Validation: Prevents resource exhaustion (CWE-400) - Service Role Key: RLS bypassed securely with explicit filtering - Error Sanitization: Production-safe error messages (CWE-209) MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID + month regex validation) - CWE-284: Improper Access Control (Explicit user_id filtering) - CWE-79: XSS (Category sanitization, though backend context) - CWE-400: Resource Exhaustion (Limit caps) - CWE-209: Information Exposure (Error sanitization) @author Sentinel Coder @version 2.0.0 (MVC Refactored) @returns {Object} Array of categories with aggregated financial data No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID do usuário"
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-01"
+            },
+            "description": "Filtro por mês (YYYY-MM)"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Filtro por nome de categoria"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filtro por mercado"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "maximum": 1000
+            },
+            "description": "Máximo de resultados"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            },
+            "description": "Offset de paginação"
+          }
+        ]
+      }
+    },
+    "/get-financial-by-lists": {
+      "get": {
+        "tags": [
+          "Financial"
+        ],
+        "operationId": "getFinancialByLists",
+        "summary": "Get Financial By Lists",
+        "description": "Get Financial Data by Shopping Lists API Endpoint Retrieves financial breakdown by shopping lists with optional filters GET /.netlify/functions/get-financial-by-lists?user_id=<uuid>&month=<YYYY-MM>&market_id=<uuid> Query Parameters: - user_id (required): User UUID - month (optional): Filter by month in YYYY-MM format - market_id (optional): Filter by market UUID - limit (optional): Maximum results (default: 100, max: 1000) - offset (optional): Pagination offset (default: 0) SECURITY IMPLEMENTATION: - UUID Validation: All UUID inputs validated via regex (CWE-89) - Month Format Validation: YYYY-MM regex prevents injection - Explicit User Filtering: All queries filtered by validated user_id (CWE-284) - Limit Validation: Prevents resource exhaustion - Service Role Key: RLS bypassed securely with explicit filtering - Error Sanitization: Production-safe error messages (CWE-209) MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID regex + month format validation) - CWE-284: Improper Access Control (Explicit user_id filtering) - CWE-400: Resource Exhaustion (Limit validation and caps) - CWE-209: Information Exposure (Error sanitization) @author Sentinel Coder @version 2.0.0 (MVC Refactored) @returns {Object} Array of shopping lists with financial data No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID do usuário"
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}$",
+              "example": "2026-01"
+            },
+            "description": "Filtro por mês (YYYY-MM)"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Filtro por mercado"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 100,
+              "maximum": 1000
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ]
+      }
+    },
+    "/get-financial-summary": {
+      "get": {
+        "tags": [
+          "Financial"
+        ],
+        "operationId": "getFinancialSummary",
+        "summary": "Get Financial Summary",
+        "description": "Get Financial Summary API Endpoint Retrieves comprehensive financial statistics for a user GET /.netlify/functions/get-financial-summary?user_id=<uuid> SECURITY IMPLEMENTATION: - UUID Validation: Strict regex prevents SQL injection (CWE-89) - Service Role Key: Bypasses RLS securely with explicit user_id filtering (CWE-284) - Error Sanitization: No stack traces in production (CWE-209) - CORS Configured: Allows authorized cross-origin requests - Read-Only: GET method only, no data mutation (CWE-352) MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID regex + RPC function with parameterized query) - CWE-284: Improper Access Control (RLS enforced via user_id in RPC) - CWE-209: Information Exposure (Sanitized error messages) - CWE-352: CSRF (Stateless GET, no state mutation) @author Sentinel Coder @version 2.0.0 (MVC Refactored) @returns {Object} Financial summary with totals, averages, favorites No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID do usuário"
+          }
+        ]
+      }
+    },
+    "/get-financial-items-by-period": {
+      "get": {
+        "tags": [
+          "Financial"
+        ],
+        "operationId": "getFinancialItemsByPeriod",
+        "summary": "Itens comprados por período (Mobile)",
+        "description": "Retorna todos os itens comprados (listas ativas e concluídas) dentro de um período, com dados pré-agregados por categoria, mercado e dia. Projetado **exclusivamente** para o app mobile Bargainly.\n\nAceita período predefinido **ou** faixa de datas explícita:\n- **Predefinido:** `period=7D` | `15D` | `30D` | `60D`\n- **Explícito:** `start_date` + `end_date` em `YYYY-MM-DD` ou `DD/MM/YYYY`\n\n### Formato de Resposta\n```json\n{\n  \"meta\": { \"user_id\": \"...\", \"period\": { \"start\": \"2026-02-04\", \"end\": \"2026-03-04\", \"label\": \"30D\" }, \"generated_at\": \"...\" },\n  \"summary\": { \"total_items\": 42, \"total_lists\": 5, \"total_markets\": 3, \"total_amount\": 487.50, \"average_amount_per_list\": 97.50 },\n  \"by_category\": [{ \"category\": \"Hortifruti\", \"items_count\": 8, \"total_amount\": 120.00, \"percentage\": 24.6, \"items\": [...] }],\n  \"by_market\": [{ \"market_name\": \"Angeloni\", \"lists_count\": 3, \"total_amount\": 310.00, \"by_category\": [...] }],\n  \"daily\": [{ \"date\": \"2026-03-01\", \"total\": 97.50, \"lists_count\": 1 }]\n}\n```\n\n### Segurança\n- **CWE-89** – `user_id` validado via UUID regex; datas validadas por regex antes de chegar ao SQL\n- **CWE-284** – RPC `get_items_by_period` com `SECURITY DEFINER` e filtro `user_id` explícito em PostgreSQL\n- **CWE-346** – CORS centralizado via `wrapHandler` (origin allowlist + rate limiting)\n- **CWE-209** – Stack traces nunca expostos em produção; mensagem genérica em 422/500\n\n### Arquitetura\n`GET /api/get-financial-items-by-period` → `wrapHandler` → `financialController.getItemsByPeriod` → `financialService.getItemsByPeriod` → `financialRepository.getItemsByPeriod` → Supabase RPC `get_items_by_period`\n\n@author Sentinel Coder\n@version 1.0.0\n@migration database/202603050001/create_get_items_by_period_function.sql",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "UUID do usuário"
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "7D",
+                "15D",
+                "30D",
+                "60D"
+              ]
+            },
+            "description": "Período predefinido. Use este **ou** `start_date` + `end_date`.",
+            "example": "30D"
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Data início em `YYYY-MM-DD` ou `DD/MM/YYYY`. Obrigatório se `period` não for informado.",
+            "example": "2026-01-01"
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Data fim em `YYYY-MM-DD` ou `DD/MM/YYYY`. Obrigatório se `period` não for informado.",
+            "example": "2026-01-31"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados financeiros aggregados por período, categoria e mercado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "user_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "period": {
+                          "type": "object",
+                          "properties": {
+                            "start": {
+                              "type": "string",
+                              "format": "date",
+                              "example": "2026-02-04"
+                            },
+                            "end": {
+                              "type": "string",
+                              "format": "date",
+                              "example": "2026-03-04"
+                            },
+                            "label": {
+                              "type": "string",
+                              "example": "30D"
+                            }
+                          }
+                        },
+                        "generated_at": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      }
+                    },
+                    "summary": {
+                      "type": "object",
+                      "properties": {
+                        "total_items": {
+                          "type": "integer",
+                          "example": 42
+                        },
+                        "total_lists": {
+                          "type": "integer",
+                          "example": 5
+                        },
+                        "total_markets": {
+                          "type": "integer",
+                          "example": 3
+                        },
+                        "total_amount": {
+                          "type": "number",
+                          "format": "float",
+                          "example": 487.5
+                        },
+                        "average_amount_per_list": {
+                          "type": "number",
+                          "format": "float",
+                          "example": 97.5
+                        }
+                      }
+                    },
+                    "by_category": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "category": {
+                            "type": "string",
+                            "example": "Hortifruti"
+                          },
+                          "items_count": {
+                            "type": "integer",
+                            "example": 8
+                          },
+                          "total_amount": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 120.0
+                          },
+                          "percentage": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 24.6
+                          },
+                          "items": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "name": {
+                                  "type": "string",
+                                  "example": "Banana"
+                                },
+                                "unit": {
+                                  "type": "string",
+                                  "example": "kg"
+                                },
+                                "unit_price": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "example": 7.5
+                                },
+                                "total_price": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "example": 22.5
+                                },
+                                "total_quantity": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "example": 3.0
+                                },
+                                "purchase_count": {
+                                  "type": "integer",
+                                  "example": 2
+                                },
+                                "last_purchased": {
+                                  "type": "string",
+                                  "format": "date",
+                                  "example": "2026-03-01"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "by_market": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "market_id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "market_name": {
+                            "type": "string",
+                            "example": "Angeloni"
+                          },
+                          "market_address": {
+                            "type": "string",
+                            "example": "Av. República Argentina, 900"
+                          },
+                          "lists_count": {
+                            "type": "integer",
+                            "example": 3
+                          },
+                          "items_count": {
+                            "type": "integer",
+                            "example": 28
+                          },
+                          "total_amount": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 310.0
+                          },
+                          "by_category": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "category": {
+                                  "type": "string",
+                                  "example": "Limpeza"
+                                },
+                                "items_count": {
+                                  "type": "integer",
+                                  "example": 5
+                                },
+                                "total_amount": {
+                                  "type": "number",
+                                  "format": "float",
+                                  "example": 85.0
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "daily": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-03-01"
+                          },
+                          "total": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 97.5
+                          },
+                          "lists_count": {
+                            "type": "integer",
+                            "example": 1
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Parâmetros inválidos (user_id ausente/inválido, período inválido, datas mal formatadas ou end_date < start_date)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Provide either a preset period (7D, 15D, 30D, 60D) or both start_date and end_date"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-04"
+      }
+    },
+    "/get-markets": {
+      "get": {
+        "tags": [
+          "Markets"
+        ],
+        "operationId": "getUserMarkets",
+        "summary": "Listar mercados do usuário",
+        "description": "Retorna os mercados associados a um usuário específico. Diferente de `/get-all-markets` (que lista todos), este endpoint filtra por `user_id`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de mercados do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "markets": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Market"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-payment-methods": {
+      "get": {
+        "tags": [
+          "Payments"
+        ],
+        "operationId": "getPaymentMethods",
+        "summary": "Get Payment Methods",
+        "description": "Handler for `/get-payment-methods`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-product-by-description-or-gtin": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "getProductByDescriptionOrGtin",
+        "summary": "Get Product By Description Or Gtin",
+        "description": "Valida e sanitiza query string para prevenir injection attacks @param {string} query - Query string a ser validada @returns {string|null} - Query sanitizada ou null se inválida No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-product-by-gtin": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "getProductByGtin",
+        "summary": "Buscar produto por GTIN / código de barras",
+        "description": "Consulta o catálogo **Cosmos API** via proxy seguro. Utilizado por `SecureAPI.getProductByGtin()`.\n\nValidação de entrada: GTIN deve ter entre 8 e 14 dígitos numéricos.",
+        "parameters": [
+          {
+            "name": "gtin",
+            "in": "query",
+            "required": true,
+            "description": "GTIN / EAN (8–14 dígitos)",
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 14,
+              "pattern": "^\\d{8,14}$"
+            },
+            "example": "7891234567890"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produto encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                },
+                "example": {
+                  "gtin": "7891234567890",
+                  "description": "Leite Integral Longa Vida 1L",
+                  "avg_price": 4.99,
+                  "brand": "Itambé",
+                  "category": "Laticínios",
+                  "image_url": "https://cdn.cosmos.bluesoft.com.br/products/7891234567890.jpg"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Produto não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Produto não encontrado na base Cosmos"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-product-categories": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "getProductCategories",
+        "summary": "Get Product Categories",
+        "description": "Handler for `/get-product-categories`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "getProducts",
+        "summary": "Buscar produtos por descrição",
+        "description": "Pesquisa produtos cadastrados por texto livre. Utilizado por `SecureAPI.getProducts()`.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": true,
+            "description": "Texto de busca",
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "example": "leite integral"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Máximo de resultados (padrão: 5)",
+            "schema": {
+              "type": "integer",
+              "default": 5,
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Produtos encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-products-by-market": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "getProductsByMarket",
+        "summary": "Buscar produtos por mercado e usuário",
+        "description": "Retorna todos os produtos cadastrados por um usuário em um mercado específico. Endpoint mobile-first: requer `user_id` e `market_id`. Suporta filtros opcionais de texto, categoria, paginação e ordenação.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário proprietário dos produtos",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do mercado para filtrar os produtos",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "650e8400-e29b-41d4-a716-446655440099"
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Texto livre para busca por nome, descrição ou marca",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "example": "arroz integral"
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "Filtrar por categoria do produto",
+            "schema": {
+              "type": "string"
+            },
+            "example": "Grãos"
+          },
+          {
+            "name": "orderBy",
+            "in": "query",
+            "required": false,
+            "description": "Campo para ordenação dos resultados",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "name",
+                "price",
+                "updated_at"
+              ],
+              "default": "created_at"
+            }
+          },
+          {
+            "name": "orderDirection",
+            "in": "query",
+            "required": false,
+            "description": "Direção da ordenação",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "default": "desc"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Número máximo de produtos a retornar",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "description": "Número de registros a pular (para paginação)",
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de produtos do mercado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "products": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Product"
+                      }
+                    }
+                  },
+                  "required": [
+                    "products"
+                  ]
+                },
+                "example": {
+                  "products": [
+                    {
+                      "id": "550e8400-e29b-41d4-a716-446655440001",
+                      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                      "market_id": "650e8400-e29b-41d4-a716-446655440099",
+                      "name": "Arroz Integral 1kg",
+                      "brand": "Tio João",
+                      "price": 8.99,
+                      "category": "Grãos",
+                      "unit": "kg",
+                      "quantity": 1,
+                      "barcode": "7891234567890",
+                      "created_at": "2026-03-02T10:00:00Z",
+                      "updated_at": "2026-03-02T10:00:00Z",
+                      "deleted_at": null
+                    },
+                    {
+                      "id": "550e8400-e29b-41d4-a716-446655440002",
+                      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                      "market_id": "650e8400-e29b-41d4-a716-446655440099",
+                      "name": "Feijão Preto 500g",
+                      "brand": "Camil",
+                      "price": 6.49,
+                      "category": "Grãos",
+                      "unit": "g",
+                      "quantity": 500,
+                      "barcode": "7898904851234",
+                      "created_at": "2026-03-02T09:00:00Z",
+                      "updated_at": "2026-03-02T09:00:00Z",
+                      "deleted_at": null
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parâmetros inválidos ou ausentes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "missing_user_id": {
+                    "summary": "user_id ausente",
+                    "value": {
+                      "error": "User ID is required"
+                    }
+                  },
+                  "missing_market_id": {
+                    "summary": "market_id ausente",
+                    "value": {
+                      "error": "Market ID is required"
+                    }
+                  },
+                  "invalid_uuid": {
+                    "summary": "UUID inválido",
+                    "value": {
+                      "error": "Invalid UUID format for market_id: not-a-uuid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Mercado não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Market not found"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Método HTTP não permitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Method Not Allowed"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-02"
+      }
+    },
+    "/get-shopping-list": {
+      "get": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "getShoppingList",
+        "summary": "Buscar lista de compras por ID",
+        "description": "Retorna uma lista de compras com todos os seus itens. Utilizado por `SecureAPI.getShoppingList()`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "UUID da lista",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário (autorização)",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Lista não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Shopping list not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-shopping-list-by-code": {
+      "get": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "getShoppingListByCode",
+        "summary": "Buscar lista de compras por código de compartilhamento",
+        "description": "Permite acesso à lista por código público. Utilizado por `SecureAPI.getShoppingListByCode()`.",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": true,
+            "description": "Código de compartilhamento da lista",
+            "schema": {
+              "type": "string"
+            },
+            "example": "XKCD42"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Lista não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-shopping-lists": {
+      "get": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "getShoppingLists",
+        "summary": "Get Shopping Lists",
+        "description": "Handler for `/get-shopping-lists`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-shopping-lists-by-market": {
+      "get": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "getShoppingListsByMarket",
+        "summary": "Listar listas de compras por mercado (Mobile)",
+        "description": "Retorna listas de compras ativas e concluídas de um usuário filtradas por mercado. Nunca retorna listas canceladas ou deletadas (soft-deleted).\n\nFormato de resposta: `{ total_lists, total_amount, lists[] }`\n\n### Segurança\n- **CWE-89**: UUID regex previne SQL injection\n- **CWE-284**: Filtragem explícita por `user_id` + `market_id` garante isolamento de dados\n- **CWE-209**: Mensagens de erro sanitizadas em produção",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          {
+            "name": "market_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do mercado",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "650e8400-e29b-41d4-a716-446655440099"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filtro de status. Se omitido retorna listas ativas **e** concluídas.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "completed"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sumário de listas de compras por mercado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "total_lists",
+                    "total_amount",
+                    "lists"
+                  ],
+                  "properties": {
+                    "total_lists": {
+                      "type": "integer",
+                      "description": "Quantidade de listas retornadas",
+                      "example": 3
+                    },
+                    "total_amount": {
+                      "type": "number",
+                      "format": "float",
+                      "description": "Soma dos valores totais de todas as listas (2 casas decimais)",
+                      "example": 470.5
+                    },
+                    "lists": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "title": {
+                            "type": "string",
+                            "example": "Compras da semana"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "active",
+                              "completed"
+                            ],
+                            "example": "active"
+                          },
+                          "total_amount": {
+                            "type": "number",
+                            "format": "float",
+                            "example": 120.5
+                          },
+                          "shopping_date": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2026-03-05"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "market_name": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "Supermercado Exemplo"
+                          },
+                          "market_address": {
+                            "type": "string",
+                            "nullable": true,
+                            "example": "Rua Exemplo, 123"
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "active_and_completed": {
+                    "summary": "Listas ativas e concluídas",
+                    "value": {
+                      "total_lists": 2,
+                      "total_amount": 470.5,
+                      "lists": [
+                        {
+                          "id": "750e8400-e29b-41d4-a716-446655440001",
+                          "title": "Compras da semana",
+                          "status": "active",
+                          "total_amount": 120.5,
+                          "shopping_date": "2026-03-05",
+                          "created_at": "2026-03-02T10:00:00Z",
+                          "market_name": "Supermercado Exemplo",
+                          "market_address": "Rua Exemplo, 123"
+                        },
+                        {
+                          "id": "750e8400-e29b-41d4-a716-446655440002",
+                          "title": "Compras do mês",
+                          "status": "completed",
+                          "total_amount": 350.0,
+                          "shopping_date": "2026-02-28",
+                          "created_at": "2026-02-25T08:00:00Z",
+                          "market_name": "Supermercado Exemplo",
+                          "market_address": "Rua Exemplo, 123"
+                        }
+                      ]
+                    }
+                  },
+                  "empty": {
+                    "summary": "Nenhuma lista encontrada",
+                    "value": {
+                      "total_lists": 0,
+                      "total_amount": 0,
+                      "lists": []
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "405": {
+            "description": "Method Not Allowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-02"
+      }
+    },
+    "/get-user-presence": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "getUserPresence",
+        "summary": "Get User Presence",
+        "description": "Get User Presence from Redis Cache Busca dados de um usuário online para exibição de presença @endpoint GET /.netlify/functions/get-user-presence?user_id=xxx&share_code=xxxx @security Backend-only (Redis credentials não expostas) @compliance CWE-200 (Information Disclosure Protection) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          },
+          {
+            "name": "share_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-user-profile": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "getUserProfile",
+        "summary": "Get User Profile",
+        "description": "Get User Profile API Endpoint Retrieves user profile information including join date GET /.netlify/functions/get-user-profile?user_id=<uuid> No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-user-settings": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "getUserSettings",
+        "summary": "Get User Settings",
+        "description": "Get User Settings API Endpoint Retrieves user settings/preferences from the preferences table GET /.netlify/functions/get-user-settings?user_id=<uuid> Architecture: API → Controller → Service → Repository → Database No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/get-user-statistics": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "getUserStatistics",
+        "summary": "Get User Statistics",
+        "description": "Get User Statistics API Endpoint Architecture: MVC Pattern API → Controller → Service → Repository → Database Retrieves comprehensive statistics for a user by aggregating data from shopping lists GET /.netlify/functions/get-user-statistics?user_id=<uuid> SECURITY IMPLEMENTATION: - Backend Proxy Pattern: Database credentials server-side only - Input validation: UUID format validation in controller layer - Proper error handling: No stack trace leakage in production - Read-only: GET method only, no data mutation - CORS configured: Allows cross-origin requests from authorized domains MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID validation + parameterized queries) - CWE-284: Improper Access Control (explicit user_id filtering) - CWE-209: Information Exposure (Error messages sanitized in production) - CWE-352: CSRF (Stateless GET endpoint, no state mutation) @version 2.0.0 (Refactored to follow MVC) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/mark-beta-used": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "markBetaUsed",
+        "summary": "Mark Beta Used",
+        "description": "Netlify Function - Mark Beta Access as Used Endpoint: POST /api/mark-beta-used Body: { phone: string, code: string } Segurança: - Validação de método HTTP (apenas POST) - CORS configurado - Rate limiting (5 tentativas por 15 min por IP) - Validação de body params no controller - Erros sem exposição de stack trace Fluxo: API → Controller → Service → Repository → Database (RPC) @version 1.0.0 No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "phone",
+                  "code"
+                ],
+                "properties": {
+                  "phone": {
+                    "type": "string"
+                  },
+                  "code": {
+                    "type": "string"
+                  }
+                }
+              },
+              "example": {
+                "phone": "11999999999",
+                "code": "BETA2026"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/refresh-token": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "refreshToken",
+        "summary": "Renovar JWT Session (Refresh Token)",
+        "description": "Emite um novo `accessToken` (15 min) e um `refreshToken` rotacionado (7 dias). O token antigo é revogado imediatamente após uso (**token rotation** — CWE-384 prevention).\n\nUsado pelo app móvel quando o access token expira. Armazene o novo `refreshToken` (substitui o anterior).\n\n### Segurança\n- **CWE-384**: Token rotation — cada refresh revoga o token antigo e emite um novo\n- **CWE-522**: Apenas o SHA-256 do refresh token é armazenado no banco (nunca o raw)\n- **CWE-209**: Mensagens de erro sanitizadas em produção\n- **OWASP A07:2021**: Falha de identificação e autenticação prevenida via TTL curto no access token\n\n### Arquitetura\n`POST /api/refresh-token` → `wrapHandler` → `buildHandler(authCtrl)` → `sessionService.refreshSession()` → `sessionRepository`\n\n@version 1.0.0",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "refreshToken"
+                ],
+                "properties": {
+                  "refreshToken": {
+                    "type": "string",
+                    "description": "Refresh token opaco de 96 caracteres hex emitido pelo endpoint `/verify-otp` ou pelo último `/refresh-token`",
+                    "minLength": 96,
+                    "maxLength": 96,
+                    "example": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tokens renovados com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JWTSessionResponse"
+                },
+                "example": {
+                  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                  "refreshToken": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5",
+                  "expiresIn": 900,
+                  "refreshExpiresIn": 604800
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "refreshToken ausente no body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Refresh token is required"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token inválido, expirado ou já revogado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "SESSION_INVALID",
+                        "SESSION_EXPIRED"
+                      ],
+                      "description": "`SESSION_INVALID` = token não encontrado ou revogado; `SESSION_EXPIRED` = TTL de 7 dias ultrapassado"
+                    }
+                  }
+                },
+                "examples": {
+                  "invalid": {
+                    "summary": "Token não encontrado ou revogado",
+                    "value": {
+                      "error": "Invalid or revoked refresh token",
+                      "code": "SESSION_INVALID"
+                    }
+                  },
+                  "expired": {
+                    "summary": "Token expirado",
+                    "value": {
+                      "error": "Refresh token expired",
+                      "code": "SESSION_EXPIRED"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-03"
+      }
+    },
+    "/remove-shopping-list-item": {
+      "delete": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "removeShoppingListItem",
+        "summary": "Remover item da lista de compras",
+        "description": "Remove permanentemente um item da lista. Utilizado por `SecureAPI.removeShoppingListItem()`.",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "query",
+            "required": true,
+            "description": "UUID do item",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item removido com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Item removido"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Item não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/remove-user-presence": {
+      "delete": {
+        "tags": [
+          "Realtime"
+        ],
+        "operationId": "removeUserPresence",
+        "summary": "Remove User Presence",
+        "description": "Remove User Presence from Redis Cache Remove dados de um usuário que saiu da lista @endpoint DELETE /.netlify/functions/remove-user-presence @security Backend-only (Redis credentials não expostas) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "share_code": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/request-otp": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "requestOTP",
+        "summary": "Solicitar código OTP por e-mail",
+        "description": "Envia um código OTP de 6 dígitos para o e-mail informado via **Resend**.\n\n**Rate Limit:** 3 requisições por 15 minutos por e-mail.\n\nUtilizado por `SecureAPI.requestOTP()` e `SecureAPI.resendOTP()`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "E-mail do usuário"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Telefone (opcional)"
+                  },
+                  "name": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Nome (opcional)"
+                  }
+                }
+              },
+              "example": {
+                "email": "usuario@email.com",
+                "phone": "11999999999",
+                "name": "João"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP enviado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPRequestResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Código enviado para usuario@email.com"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/scan-invoice": {
+      "get": {
+        "tags": [
+          "Invoices"
+        ],
+        "operationId": "getInvoiceByAccessKey",
+        "summary": "Buscar nota fiscal por chave de acesso",
+        "description": "Recupera dados de uma NFC-e já processada pela chave de acesso (44 dígitos). Requer autenticação via `userId`.",
+        "parameters": [
+          {
+            "name": "accessKey",
+            "in": "query",
+            "required": true,
+            "description": "Chave de acesso NFC-e (44 dígitos)",
+            "schema": {
+              "type": "string",
+              "minLength": 44,
+              "maxLength": 44
+            }
+          },
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário autenticado",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dados da nota fiscal",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "422": {
+            "description": "userId ausente ou inválido"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      },
+      "post": {
+        "tags": [
+          "Invoices"
+        ],
+        "operationId": "scanInvoice",
+        "summary": "Processar QR Code de nota fiscal (NFC-e)",
+        "description": "Recebe o conteúdo do QR Code de uma NFC-e e retorna os dados estruturados da nota: itens, valores, mercado emissor.",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário autenticado",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "qrCodeContent"
+                ],
+                "properties": {
+                  "qrCodeContent": {
+                    "type": "string",
+                    "description": "Conteúdo bruto do QR Code da NFC-e (URL ou chave)"
+                  }
+                }
+              },
+              "example": {
+                "qrCodeContent": "https://www.sefaz.rs.gov.br/NFCE/NFC-E-consulta.aspx?chNFe=43260211234567000100650010000000011234567890&nVersao=100&tpAmb=1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Nota fiscal processada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object"
+                          }
+                        },
+                        "total": {
+                          "type": "number"
+                        },
+                        "market": {
+                          "$ref": "#/components/schemas/Market"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "422": {
+            "description": "userId ausente ou QR Code inválido"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/search-nearby-markets": {
+      "post": {
+        "tags": [
+          "Markets"
+        ],
+        "operationId": "searchNearbyMarkets",
+        "summary": "Buscar mercados próximos (Google Places)",
+        "description": "Pesquisa mercados próximos usando a Google Places API via backend proxy. Utilizado por `SecureAPI.searchNearbyMarkets()`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchNearbyMarketsRequest",
+                "properties": {
+                  "latitude": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "longitude": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "radius": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "types": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              },
+              "example": {
+                "latitude": -23.5505,
+                "longitude": -46.6333,
+                "radius": 5000,
+                "types": [
+                  "supermarket",
+                  "grocery_or_supermarket"
+                ],
+                "user_id": "550e8400-e29b-41d4-a716-446655440000"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Mercados próximos encontrados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NearbyMarketsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/update-market": {
+      "put": {
+        "tags": [
+          "Markets"
+        ],
+        "operationId": "updateMarket",
+        "summary": "Update Market",
+        "description": "Netlify Function to update a market Updates market information (name, address, cnpj, phone, email, website) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "x-auto-detected": true
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "...updates": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28"
+      }
+    },
+    "/update-product": {
+      "put": {
+        "tags": [
+          "Products"
+        ],
+        "operationId": "updateProduct",
+        "summary": "Update Product",
+        "description": "Update Product API Netlify Function to update product data (category, market, price) Security: Input validation, XSS prevention, SQL injection protection via Supabase No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "product_id",
+                  "user_id"
+                ],
+                "properties": {
+                  "product_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "category": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "price": {
+                    "type": "number",
+                    "nullable": true
+                  },
+                  "market_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  }
+                }
+              },
+              "example": {
+                "product_id": "550e8400-e29b-41d4-a716-446655440000",
+                "user_id": "661e8400-e29b-41d4-a716-446655440001",
+                "price": 6.99
+              }
+            }
+          }
+        }
+      }
+    },
+    "/update-shopping-list": {
+      "put": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "updateShoppingList",
+        "summary": "Atualizar lista de compras",
+        "description": "Atualiza campos de uma lista de compras existente. Utilizado por `SecureAPI.updateShoppingList()`.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "description": "UUID da lista",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShoppingListRequest",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              },
+              "example": {
+                "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                "name": "Compras do mês",
+                "market_id": "660e8400-e29b-41d4-a716-446655440001",
+                "status": "active"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lista atualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingList"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Lista não encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/update-shopping-list-item": {
+      "put": {
+        "tags": [
+          "Shopping Lists"
+        ],
+        "operationId": "updateShoppingListItem",
+        "summary": "Atualizar item da lista de compras",
+        "description": "Atualiza campos de um item. Utilizado por `SecureAPI.updateShoppingListItem()`.",
+        "parameters": [
+          {
+            "name": "itemId",
+            "in": "query",
+            "required": true,
+            "description": "UUID do item",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingListItemRequest"
+              },
+              "example": {
+                "quantity": 3,
+                "price": 5.49,
+                "checked": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Item atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingListItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Item não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/update-user-onboarding": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "completeUserOnboarding",
+        "summary": "Concluir onboarding do usuário",
+        "description": "Registra a aceitação dos termos de uso e mercado selecionado no onboarding. Utilizado por `SecureAPI.completeUserOnboarding()`.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "userId"
+                ],
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "marketId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true
+                  },
+                  "termsAccepted": {
+                    "type": "boolean",
+                    "default": true
+                  }
+                }
+              },
+              "example": {
+                "userId": "550e8400-e29b-41d4-a716-446655440000",
+                "marketId": "660e8400-e29b-41d4-a716-446655440001",
+                "termsAccepted": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Onboarding concluído",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/update-user-presence": {
+      "put": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "updateUserPresence",
+        "summary": "Update User Presence",
+        "description": "Update User Presence in Redis Cache Armazena dados de usuários online para exibição de presença @endpoint PUT /.netlify/functions/update-user-presence @security Backend-only (Redis credentials não expostas) @compliance CWE-200 (Information Disclosure Protection) No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "share_code": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/update-user-profile": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "updateUserProfile",
+        "summary": "Update User Profile",
+        "description": "Update User Profile API Endpoint Updates user profile information (name, phone, email) using Supabase API POST /.netlify/functions/update-user-profile Body: { user_id: <uuid>, name, phone, email } No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "phone": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "email": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "cep": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "logradouro": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "numero": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "complemento": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "bairro": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "cidade": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "uf": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "estado": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/update-user-settings": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "updateUserSettings",
+        "summary": "Update User Settings",
+        "description": "Update User Settings API Endpoint Updates user settings/preferences in the preferences table POST /.netlify/functions/update-user-settings Body: { user_id: <uuid>, settings: { notification: {...}, privacy: {...} } } No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "requestBody": {
+          "required": true,
+          "x-auto-generated": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  },
+                  "settings": {
+                    "type": "string",
+                    "x-auto-detected": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/update-user-terms": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "updateUserTerms",
+        "summary": "Update User Terms",
+        "description": "Update User Terms API Endpoint Endpoint para atualizar aceite de termos de usuários existentes (LGPD Retroactive Compliance - Lei 13.709/2018) Este endpoint é usado para atualizar usuários criados antes da implementação do aceite de termos (migration 202602130001). POST /.netlify/functions/update-user-terms Body: { user_id, terms_accepted_at, terms_version, privacy_policy_accepted_at } Architecture: MVC Pattern API → Controller → Service → Repository @version 2.0.0 @date 2026-02-14 No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "terms_accepted_at"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "terms_accepted_at": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "terms_version": {
+                    "type": "string"
+                  },
+                  "privacy_policy_accepted_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "nullable": true
+                  }
+                }
+              },
+              "example": {
+                "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                "terms_accepted_at": "2026-02-28T00:00:00Z",
+                "terms_version": "2.0"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/user-auth": {
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "operationId": "userAuth",
+        "summary": "Autenticar / criar / atualizar usuário (multi-action)",
+        "description": "Endpoint multi-ação controlado pelo campo `action`. Utilizado por `SecureAPI.getOrCreateUser()`, `SecureAPI.updateUser()` e `SecureAPI.findOrCreateMarket()`.\n\n| `action` | Descrição |\n|---|---|\n| `getOrCreate` | Busca ou cria o usuário |\n| `update` | Atualiza dados do perfil |\n| `findOrCreateMarket` | Busca ou cria mercado vinculado ao usuário |",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserAuthRequest"
+              },
+              "examples": {
+                "getOrCreate": {
+                  "summary": "Criar ou buscar usuário",
+                  "value": {
+                    "action": "getOrCreate",
+                    "name": "João Silva",
+                    "phone": "11999999999",
+                    "email": "joao@email.com",
+                    "preferred_market_id": null,
+                    "skipped_onboarding": false,
+                    "is_demo_user": false,
+                    "terms_accepted_at": "2026-02-25T12:00:00Z",
+                    "terms_version": "1.0",
+                    "privacy_policy_accepted_at": "2026-02-25T12:00:00Z"
+                  }
+                },
+                "update": {
+                  "summary": "Atualizar perfil",
+                  "value": {
+                    "action": "update",
+                    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+                    "name": "João Silva Atualizado",
+                    "email": "novo@email.com"
+                  }
+                },
+                "findOrCreateMarket": {
+                  "summary": "Buscar ou criar mercado",
+                  "value": {
+                    "action": "findOrCreateMarket",
+                    "name": "Supermercado BomPreço",
+                    "address": "Av. Paulista, 1500, São Paulo",
+                    "place_id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+                    "latitude": -23.5632,
+                    "longitude": -46.6543,
+                    "rating": 4.1,
+                    "user_id": "550e8400-e29b-41d4-a716-446655440000"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Usuário ou mercado encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAuthResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Usuário ou mercado criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserAuthResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/validate-session": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "validateSession",
+        "summary": "Validar sessão (JWT Bearer ou Legacy UUID)",
+        "description": "Valida uma sessão ativa via **estratégia dupla**:\n\n**Estratégia 1 — JWT Bearer (preferencial para mobile):**  \nEnvie `Authorization: Bearer <accessToken>` no header. O endpoint decodifica e verifica a assinatura HS256 sem consultar o banco.\n\n**Estratégia 2 — Legacy UUID (backward compat para web):**  \nEnvie `{ user_id }` no body. O endpoint consulta o Supabase e retorna o perfil.\n\nA resposta inclui o campo `authMethod` (`\"jwt\"` ou `\"legacy\"`) para o cliente saber qual caminho foi utilizado.\n\n### Erros JWT\n| Código | Descrição |\n|---|---|\n| `JWT_EXPIRED` | Access token expirado — chame `POST /api/refresh-token` |\n| `JWT_INVALID` | Token inválido, adulterado ou com assinatura incorreta |\n\n### Segurança\n- **CWE-208**: Comparação de assinatura HMAC com `timingSafeEqual` (sem timing side-channel)\n- **CWE-284**: JWT carrega `sub` (user ID) — sem lookup de banco para validação\n- **CWE-209**: Mensagens de erro sanitizadas em produção\n\n### Arquitetura\n`POST /api/validate-session` → `wrapHandler` → `buildHandler(authCtrl)` → `ctrl.validateAccessToken()` | `ctrl.validateUserSession()`\n\n@version 3.0.0",
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "description": "JWT Bearer token. Formato: `Bearer <accessToken>`. Quando presente, usa Estratégia 1 (JWT).",
+            "schema": {
+              "type": "string",
+              "pattern": "^Bearer .+"
+            },
+            "example": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID do usuário (Estratégia 2 — Legacy). Ignorado se `Authorization` header estiver presente."
+                  }
+                }
+              },
+              "example": {
+                "user_id": "550e8400-e29b-41d4-a716-446655440000"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sessão válida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "valid",
+                    "authMethod"
+                  ],
+                  "properties": {
+                    "valid": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "authMethod": {
+                      "type": "string",
+                      "enum": [
+                        "jwt",
+                        "legacy"
+                      ],
+                      "description": "Estratégia utilizada para validar a sessão"
+                    },
+                    "user": {
+                      "type": "object",
+                      "description": "Perfil do usuário autenticado",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "email": {
+                          "type": "string",
+                          "format": "email"
+                        },
+                        "name": {
+                          "type": "string",
+                          "nullable": true
+                        }
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "jwt": {
+                    "summary": "Validação via JWT Bearer",
+                    "value": {
+                      "valid": true,
+                      "authMethod": "jwt",
+                      "user": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "email": "usuario@email.com",
+                        "name": "João"
+                      }
+                    }
+                  },
+                  "legacy": {
+                    "summary": "Validação via user_id (legacy)",
+                    "value": {
+                      "valid": true,
+                      "authMethod": "legacy",
+                      "user": {
+                        "id": "550e8400-e29b-41d4-a716-446655440000",
+                        "email": "usuario@email.com",
+                        "name": "João"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "user_id ausente ou em formato de UUID inválido (Estratégia 2)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "user_id is required"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT inválido ou expirado (Estratégia 1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "valid": {
+                      "type": "boolean",
+                      "example": false
+                    },
+                    "error": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "JWT_EXPIRED",
+                        "JWT_INVALID"
+                      ],
+                      "description": "`JWT_EXPIRED` = renove via `/refresh-token`; `JWT_INVALID` = token adulterado"
+                    }
+                  }
+                },
+                "examples": {
+                  "expired": {
+                    "summary": "Access token expirado",
+                    "value": {
+                      "valid": false,
+                      "error": "Token expired",
+                      "code": "JWT_EXPIRED"
+                    }
+                  },
+                  "invalid": {
+                    "summary": "Token inválido",
+                    "value": {
+                      "valid": false,
+                      "error": "Invalid token",
+                      "code": "JWT_INVALID"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-03"
+      }
+    },
+    "/verify-beta-access": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "verifyBetaAccess",
+        "summary": "Verify Beta Access",
+        "description": "Netlify Function - Beta Access Verification Endpoint: GET /api/verify-beta-access?phone=<value>&code=<value> Segurança: - Validação de método HTTP (apenas GET) - CORS configurado - Rate limiting (10 tentativas por 15 min por IP) - Validação de query params no controller - Erros sem exposição de stack trace Fluxo: API → Controller → Service → Repository → Database (RPC) @version 1.0.0 No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "204": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-28",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Telefone do usuário"
+          },
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Código de acesso beta"
+          }
+        ]
+      }
+    },
+    "/verify-otp": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "operationId": "verifyOTP",
+        "summary": "Verificar código OTP",
+        "description": "Valida o código OTP e retorna o perfil do usuário autenticado **junto com tokens JWT** para autenticação nas chamadas subsequentes (mobile-first).\n\n**Rate Limit:** 5 tentativas por 15 minutos por e-mail.\n\nApós verificação bem-sucedida, armazene:\n- `accessToken` → `sessionStorage` (tab-scoped, 15 min)\n- `refreshToken` → `localStorage` (persistente, 7 dias)\n\nQuando o `accessToken` expirar, chame `POST /api/refresh-token` para renovar a sessão.\n\nUtilizado por `SecureAPI.verifyOTP()`.",
+        "x-version": "2.0.0",
+        "x-changelog": "v2.0.0 — emite accessToken + refreshToken após verificação bem-sucedida. Clientes devem armazenar accessToken em sessionStorage e refreshToken em localStorage.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "email",
+                  "token"
+                ],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "token": {
+                    "type": "string",
+                    "minLength": 6,
+                    "maxLength": 6,
+                    "pattern": "^\\d{6}$",
+                    "description": "Código OTP de 6 dígitos"
+                  },
+                  "phone": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "name": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              },
+              "example": {
+                "email": "usuario@email.com",
+                "token": "123456",
+                "phone": "11999999999",
+                "name": "João"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OTP verificado – usuário autenticado com JWT session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OTPVerifyResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "Código verificado!",
+                  "user": {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "email": "usuario@email.com",
+                    "name": "João"
+                  },
+                  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                  "refreshToken": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4",
+                  "expiresIn": 900,
+                  "refreshExpiresIn": 604800
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "description": "Código inválido ou expirado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Código inválido ou expirado"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-02-25"
+      }
+    },
+    "/family-finance-member": {
+      "get": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "getFamilyFinanceMember",
+        "summary": "Buscar perfil do membro",
+        "description": "Retorna o perfil do membro vinculado ao usuário autenticado.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "description": "UUID do usuário autenticado",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Perfil do membro",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMember"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Membro não encontrado"
+          },
+          "422": {
+            "description": "user_id ausente ou inválido"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      },
+      "post": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "upsertFamilyFinanceMember",
+        "summary": "Criar ou atualizar perfil do membro",
+        "description": "Cria ou atualiza o perfil do membro (upsert por user_id).",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "name",
+                  "phone"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "phone": {
+                    "type": "string",
+                    "example": "5511999998888"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Perfil criado/atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyMember"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "422": {
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      }
+    },
+    "/family-finance-transactions": {
+      "get": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "getFamilyFinanceTransactions",
+        "summary": "Listar transações financeiras",
+        "description": "Retorna transações do membro com filtros opcionais.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "whatsapp",
+                "app"
+              ]
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "description": "Formato YYYY-MM",
+            "schema": {
+              "type": "string",
+              "example": "2026-03"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de transações",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FamilyTransaction"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Parâmetros inválidos"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      },
+      "post": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "createFamilyFinanceTransaction",
+        "summary": "Registrar nova transação",
+        "description": "Cria uma nova transação financeira. Amount negativo = despesa, positivo = receita.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "name",
+                  "amount",
+                  "category",
+                  "member_id",
+                  "date"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "name": {
+                    "type": "string",
+                    "maxLength": 150
+                  },
+                  "amount": {
+                    "type": "number",
+                    "description": "Negativo=despesa, positivo=receita. Não pode ser zero."
+                  },
+                  "category": {
+                    "type": "string"
+                  },
+                  "member_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "date": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-03-09"
+                  },
+                  "notes": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "whatsapp",
+                      "app"
+                    ],
+                    "default": "app"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transação criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyTransaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "422": {
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      }
+    },
+    "/family-finance-delete-last-transaction": {
+      "delete": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "deleteLastFamilyFinanceTransaction",
+        "summary": "Desfazer última transação WhatsApp",
+        "description": "Remove a transação WhatsApp mais recente do membro (bot 'desfazer'). Usa fn_delete_last_whatsapp_transaction com validação de ownership.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "member_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transação removida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhuma transação WhatsApp encontrada"
+          },
+          "422": {
+            "description": "user_id ou member_id inválido"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      }
+    },
+    "/family-finance-goals": {
+      "get": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "getFamilyFinanceGoals",
+        "summary": "Listar metas financeiras",
+        "description": "Retorna metas compartilhadas da família com progress_percent e remaining calculados.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de metas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FamilyGoal"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "user_id inválido"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      },
+      "post": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "createFamilyFinanceGoal",
+        "summary": "Criar nova meta financeira",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "label",
+                  "target",
+                  "deadline"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "label": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "target": {
+                    "type": "number",
+                    "minimum": 0.01
+                  },
+                  "saved": {
+                    "type": "number",
+                    "minimum": 0,
+                    "default": 0
+                  },
+                  "deadline": {
+                    "type": "string",
+                    "example": "2026-12"
+                  },
+                  "color": {
+                    "type": "string",
+                    "example": "#10B981"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Meta criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyGoal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "422": {
+            "description": "Dados inválidos"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      },
+      "put": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "updateFamilyFinanceGoal",
+        "summary": "Atualizar meta existente",
+        "description": "Atualiza campos permitidos (label, target, saved, deadline, color). Campos imutáveis: id, created_at, created_by_member_id.",
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user_id"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "target": {
+                    "type": "number",
+                    "minimum": 0.01
+                  },
+                  "saved": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "deadline": {
+                    "type": "string"
+                  },
+                  "color": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Meta atualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FamilyGoal"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "422": {
+            "description": "goal_id ou dados inválidos"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      },
+      "delete": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "deleteFamilyFinanceGoal",
+        "summary": "Remover meta",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "goal_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Meta removida",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "deleted": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "goal_id inválido"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      }
+    },
+    "/family-finance-summary": {
+      "get": {
+        "tags": [
+          "FamilyFinance"
+        ],
+        "operationId": "getFamilyFinanceSummary",
+        "summary": "Resumo financeiro mensal",
+        "description": "Retorna totais de receita/despesas/saldo e breakdown por categoria. Usa view v_monthly_summary / fn_monthly_summary.",
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "required": false,
+            "description": "Mês no formato YYYY-MM (padrão: mês atual)",
+            "schema": {
+              "type": "string",
+              "example": "2026-03"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resumo financeiro do mês",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "month": {
+                      "type": "string"
+                    },
+                    "totals": {
+                      "type": "object",
+                      "properties": {
+                        "total_income": {
+                          "type": "number"
+                        },
+                        "total_expenses": {
+                          "type": "number"
+                        },
+                        "balance": {
+                          "type": "number"
+                        }
+                      }
+                    },
+                    "by_category": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "category": {
+                            "type": "string"
+                          },
+                          "category_total": {
+                            "type": "number"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "user_id ou month inválido"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "sentinel-coder",
+        "x-last-synced": "2026-03-09"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddressByCepResponse": {
+        "type": "object",
+        "description": "Endereço completo retornado pela API ViaCEP",
+        "required": [
+          "cep",
+          "logradouro",
+          "bairro",
+          "cidade",
+          "uf"
+        ],
+        "properties": {
+          "cep": {
+            "type": "string",
+            "example": "01310-100",
+            "description": "CEP formatado no padrão 00000-000"
+          },
+          "logradouro": {
+            "type": "string",
+            "example": "Avenida Paulista",
+            "description": "Nome do logradouro (rua, avenida, etc.)"
+          },
+          "complemento": {
+            "type": "string",
+            "example": "de 1 a 610 - lado par",
+            "description": "Complemento do endereço (pode ser vazio)"
+          },
+          "bairro": {
+            "type": "string",
+            "example": "Bela Vista",
+            "description": "Nome do bairro"
+          },
+          "cidade": {
+            "type": "string",
+            "example": "São Paulo",
+            "description": "Nome do município (localidade no ViaCEP)"
+          },
+          "uf": {
+            "type": "string",
+            "example": "SP",
+            "minLength": 2,
+            "maxLength": 2,
+            "description": "Sigla do estado (UF)"
+          },
+          "estado": {
+            "type": "string",
+            "example": "São Paulo",
+            "description": "Nome completo do estado"
+          },
+          "ibge": {
+            "type": "string",
+            "example": "3550308",
+            "description": "Código IBGE do município"
+          },
+          "ddd": {
+            "type": "string",
+            "example": "11",
+            "description": "DDD telefônico da região"
+          }
+        }
+      },
+      "Market": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Supermercado Extra"
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "latitude": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "place_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Google Places ID"
+          },
+          "rating": {
+            "type": "number",
+            "format": "float",
+            "nullable": true,
+            "minimum": 0,
+            "maximum": 5
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "website": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MarketsListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Market"
+            }
+          },
+          "count": {
+            "type": "integer",
+            "example": 25
+          }
+        }
+      },
+      "SearchNearbyMarketsRequest": {
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "format": "float",
+            "example": -23.5505
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float",
+            "example": -46.6333
+          },
+          "radius": {
+            "type": "integer",
+            "default": 10000,
+            "description": "Raio em metros",
+            "example": 5000
+          },
+          "types": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": [
+              "supermarket",
+              "grocery_or_supermarket",
+              "store"
+            ]
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          }
+        }
+      },
+      "NearbyMarketsResponse": {
+        "type": "object",
+        "properties": {
+          "markets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Market"
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "João Silva"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true,
+            "example": "11999999999"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "preferred_market_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "is_demo_user": {
+            "type": "boolean",
+            "default": false
+          },
+          "skipped_onboarding": {
+            "type": "boolean",
+            "default": false
+          },
+          "terms_accepted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "terms_version": {
+            "type": "string",
+            "nullable": true
+          },
+          "privacy_policy_accepted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UserAuthRequest": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "getOrCreate",
+              "update",
+              "findOrCreateMarket"
+            ],
+            "description": "Ação a executar"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "nullable": true
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Requerido para action=update"
+          },
+          "preferred_market_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "skipped_onboarding": {
+            "type": "boolean"
+          },
+          "is_demo_user": {
+            "type": "boolean"
+          },
+          "terms_accepted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "terms_version": {
+            "type": "string",
+            "nullable": true
+          },
+          "privacy_policy_accepted_at": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "market_name": {
+            "type": "string",
+            "description": "Requerido para action=findOrCreateMarket (legado)"
+          },
+          "address": {
+            "type": "string",
+            "nullable": true
+          },
+          "place_id": {
+            "type": "string",
+            "nullable": true
+          },
+          "latitude": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "longitude": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "rating": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          }
+        }
+      },
+      "UserAuthResponse": {
+        "type": "object",
+        "properties": {
+          "created": {
+            "type": "boolean"
+          },
+          "data": {
+            "$ref": "#/components/schemas/User"
+          }
+        }
+      },
+      "OTPRequestResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "OTPVerifyResponse": {
+        "type": "object",
+        "description": "Resposta do verify-otp v2.0.0+. Inclui tokens JWT para autenticação móvel.",
+        "required": [
+          "success",
+          "user"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Código verificado!"
+          },
+          "user": {
+            "$ref": "#/components/schemas/User"
+          },
+          "accessToken": {
+            "type": "string",
+            "description": "JWT access token HS256 com TTL de 15 min. Use como `Authorization: Bearer <token>` em todas as chamadas à API.",
+            "nullable": true,
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token opaco (96 chars hex) com TTL de 7 dias. Armazene em localStorage. Use em `POST /api/refresh-token`.",
+            "nullable": true,
+            "example": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "TTL do accessToken em segundos (900 = 15 min)",
+            "nullable": true,
+            "example": 900
+          },
+          "refreshExpiresIn": {
+            "type": "integer",
+            "description": "TTL do refreshToken em segundos (604800 = 7 dias)",
+            "nullable": true,
+            "example": 604800
+          }
+        }
+      },
+      "JWTSessionResponse": {
+        "type": "object",
+        "description": "Par de tokens JWT emitido ou renovado. Retornado por `POST /api/refresh-token`.",
+        "required": [
+          "accessToken",
+          "refreshToken",
+          "expiresIn",
+          "refreshExpiresIn"
+        ],
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT access token HS256 (TTL: 15 min). Algoritmo: HS256. Payload: `{ sub, email, name, type: 'access', iss: 'bargainly-api', iat, exp }`.",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Novo refresh token rotacionado (96 chars hex, TTL: 7 dias). Substitui o token anterior — armazene o novo valor.",
+            "example": "b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "description": "TTL do accessToken em segundos",
+            "example": 900
+          },
+          "refreshExpiresIn": {
+            "type": "integer",
+            "description": "TTL do refreshToken em segundos",
+            "example": 604800
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "gtin": {
+            "type": "string",
+            "example": "7891234567890"
+          },
+          "description": {
+            "type": "string",
+            "example": "Leite Integral Longa Vida 1L"
+          },
+          "avg_price": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "brand": {
+            "type": "string",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "image_url": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ShoppingListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "list_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Arroz"
+          },
+          "quantity": {
+            "type": "number",
+            "example": 2
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true,
+            "example": "kg"
+          },
+          "price": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "checked": {
+            "type": "boolean",
+            "default": false
+          },
+          "gtin": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ShoppingListItemRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 0
+          },
+          "unit": {
+            "type": "string",
+            "nullable": true
+          },
+          "price": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "nullable": true
+          },
+          "checked": {
+            "type": "boolean"
+          },
+          "gtin": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ShoppingList": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "Compras da semana"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "market_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ],
+            "default": "active"
+          },
+          "share_code": {
+            "type": "string",
+            "nullable": true,
+            "example": "XKCD42"
+          },
+          "total_estimated": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ShoppingListItem"
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateShoppingListRequest": {
+        "type": "object",
+        "required": [
+          "user_id"
+        ],
+        "properties": {
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "market_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ]
+          }
+        }
+      },
+      "SuccessResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Mensagem de erro genérica"
+          }
+        }
+      },
+      "ShoppingListItemInput": {
+        "type": "object",
+        "required": [
+          "product_name",
+          "quantity"
+        ],
+        "properties": {
+          "product_name": {
+            "type": "string",
+            "example": "Arroz"
+          },
+          "category": {
+            "type": "string",
+            "example": "Grãos"
+          },
+          "quantity": {
+            "type": "number",
+            "minimum": 0.001,
+            "example": 2
+          },
+          "unit": {
+            "type": "string",
+            "example": "kg"
+          },
+          "unit_price": {
+            "type": "number",
+            "minimum": 0,
+            "example": 5.99
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "FamilyMember": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FamilyTransaction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "income",
+              "expense"
+            ]
+          },
+          "category": {
+            "type": "string"
+          },
+          "member_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "whatsapp",
+              "app"
+            ]
+          },
+          "notes": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FamilyGoal": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "label": {
+            "type": "string"
+          },
+          "target": {
+            "type": "number"
+          },
+          "saved": {
+            "type": "number"
+          },
+          "deadline": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "progress_percent": {
+            "type": "number"
+          },
+          "remaining": {
+            "type": "number"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Requisição inválida – parâmetros ausentes ou incorretos",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "Parâmetro obrigatório ausente"
+            }
+          }
+        }
+      },
+      "MethodNotAllowed": {
+        "description": "Método HTTP não permitido para este endpoint",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "Method not allowed"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Limite de requisições excedido",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "Muitas tentativas. Aguarde 15 minutos."
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Erro interno no servidor",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "example": {
+              "error": "Não foi possível processar sua solicitação. Tente novamente."
+            }
+          }
+        }
+      }
+    }
+  },
+  "x-generated-at": "2026-03-02T00:00:00.000Z",
+  "x-generator": "scripts/generate-openapi.js"
+}

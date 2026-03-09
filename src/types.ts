@@ -22,10 +22,12 @@ export interface ParsedTransaction {
   ambiguityReason?: string;
 }
 
+/** Membro da família vinculado a um user_id do sistema */
 export interface Member {
-  id: string;
+  id: string;        // ID do perfil family-finance-member
+  userId: string;    // UUID do usuário autenticado (user-auth)
   name: string;
-  phone: string;           // Ex: "5511999998888"
+  phone: string;     // Ex: "5511999998888"
 }
 
 export interface BotContext {
@@ -44,3 +46,64 @@ export type CommandType =
   | 'goals'         // "/metas"
   | 'help'          // "/ajuda"
   | 'unknown';
+
+// ── Modelos da API FamilyFinance ──────────────────
+
+/** Perfil do membro retornado por /family-finance-member */
+export interface FamilyMember {
+  id: string;
+  user_id: string;
+  name: string;
+  phone: string;
+  created_at?: string;
+}
+
+/** Transação retornada por /family-finance-transactions */
+export interface FamilyTransaction {
+  id: string;
+  member_id: string;
+  user_id: string;
+  name: string;
+  amount: number;
+  category: string;
+  date: string;
+  notes?: string;
+  source: 'whatsapp' | 'app';
+  created_at?: string;
+}
+
+/** Meta financeira retornada por /family-finance-goals */
+export interface FamilyGoal {
+  id: string;
+  user_id?: string;
+  label: string;
+  target: number;
+  saved: number;
+  deadline: string;
+  color?: string;
+  progress_percent: number;
+  remaining: number;
+  created_at?: string;
+}
+
+/** Resumo mensal retornado por /family-finance-summary */
+export interface ApiMonthlySummary {
+  month: string;
+  totals: {
+    total_income: number;
+    total_expenses: number;
+    balance: number;
+  };
+  by_category: Array<{
+    category: string;
+    category_total: number;
+  }>;
+}
+
+/** Usuário retornado por /user-auth */
+export interface AuthUser {
+  id: string;          // UUID do usuário
+  name: string;
+  phone: string;
+  email?: string;
+}

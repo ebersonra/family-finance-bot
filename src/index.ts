@@ -9,7 +9,7 @@ import { handleMessage } from './handlers/messageHandler';
 
 // ── Validação de variáveis de ambiente ────────────
 
-const required = ['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'ALLOWED_NUMBERS'];
+const required = ['ANTHROPIC_API_KEY', 'API_BASE_URL', 'ALLOWED_NUMBERS'];
 for (const key of required) {
   if (!process.env[key]) {
     console.error(`❌ Variável de ambiente ausente: ${key}`);

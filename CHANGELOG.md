@@ -9,6 +9,73 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [1.3.0] — 2026-03-09
+
+### Adicionado — `database/init.sql` (revisão DBA)
+
+#### Autenticação customizada via variável de sessão PostgreSQL
+
+O projeto adota autenticação própria via `public.users` (phone + name), **sem uso de `auth.uid()`** do Supabase Auth. O `user_id` é propagado com escopo de transação via `SET LOCAL app.current_user_id`.
+
+**Nova função `get_current_user_id()` — `SECURITY DEFINER STABLE`**
+- Lê `app.current_user_id` da sessão PostgreSQL.
+- Valida que o usuário existe em `public.users` com `is_active = TRUE` e `deleted_at IS NULL`.
+- Retorna `NULL` em qualquer condição inválida (contexto ausente, UUID inválido, usuário inativo/deletado) — bloqueando o acesso via RLS automaticamente.
+- **Nota de migração:** a migração `202512090001/add_demo_user_fields.sql` sobrescrevia esta função com versão simplificada sem essas validações. Esta versão (`202603090145`) é a canônica e deve ser restaurada após migrações que a sobrescrevam.
+
+**Nova função RPC `exec_with_user_context(UUID, TEXT)` — `SECURITY DEFINER`**
+- Ponto de entrada seguro para definir o contexto antes de queries com RLS.
+- Valida o usuário (`is_active`, `deleted_at`) antes de executar `set_config('app.current_user_id', ..., true)` (escopo de transação).
+- Retorna JSON com `success`, `user_id`, `operation` e `timestamp`.
+- `GRANT EXECUTE TO authenticated` — **nunca** conceder a `anon`.
+
+#### RLS completamente reescrito — autenticação customizada
+
+| Tabela         | Padrão anterior (`auth.uid()`) | Padrão novo (`get_current_user_id()`)                            |
+|----------------|-------------------------------|------------------------------------------------------------------|
+| `members`      | `user_id = auth.uid()`        | `user_id = get_current_user_id()`                               |
+| `members` UPDATE | sem `WITH CHECK`            | `USING` + `WITH CHECK` idênticos (impede transferência de ownership) |
+| `transactions` | `member_id IN (SELECT ...)`   | `EXISTS (SELECT 1 FROM members WHERE id = member_id AND user_id = get_current_user_id())` |
+| `transactions` UPDATE | sem `WITH CHECK`       | `USING` + `WITH CHECK` (impede reatribuição de `member_id`)     |
+| `goals`        | `auth.uid() IS NOT NULL`      | `get_current_user_id() IS NOT NULL`                             |
+
+- Adicionado `COMMENT ON POLICY` em todas as 12 políticas.
+- Adicionado `COMMENT ON TABLE` com contexto de RLS nas tabelas `members`, `transactions` e `goals`.
+
+#### Hardening de funções SECURITY DEFINER
+
+**`fn_delete_last_whatsapp_transaction(UUID)`** — antes apagava sem validar quem chamava. Agora:
+1. Chama `get_current_user_id()` — exception se contexto ausente.
+2. Verifica que `members.user_id = v_caller_id` — exception com hint `CWE-284` se não pertencer.
+3. `GRANT EXECUTE TO authenticated` adicionado.
+
+**`fn_monthly_summary(DATE)`** — sem SECURITY DEFINER; por ser `STABLE` sem bypass, respeita RLS naturalmente. `GRANT EXECUTE TO authenticated` adicionado.
+
+#### Bloco de verificação pós-deploy (Seção 11 do SQL)
+
+Novo bloco `DO $$` que valida após cada execução:
+- RLS habilitado nas 3 tabelas.
+- Mínimo de 4 políticas por tabela.
+- Funções `get_current_user_id()` e `exec_with_user_context()` presentes no schema `public`.
+- Exibe `✅ SUCESSO` ou `⚠️ ATENÇÃO` no log do SQL Editor.
+
+#### Diagrama de relacionamentos atualizado
+
+Diagrama ao final do script expandido com fluxo completo de autenticação customizada e lista de funções `SECURITY DEFINER`.
+
+### Adicionado — `.github/context/context.md`
+
+- **Seção 8** completamente reescrita: modelo de autenticação customizada, funções do banco, regra de retorno NULL, tabela de regras expandida com 9 novas entradas de segurança.
+- **Seção 11** (Débitos Técnicos): nova linha sobre escopo de `app.current_user_id`.
+- **Seção 12** (Funções e Triggers): tabela expandida com colunas `GRANT` e detalhes de tipo (`SECURITY DEFINER`, `STABLE`).
+- **Nova Seção 13** — Padrões de Banco de Dados (DBA): fluxo de autenticação, 4 padrões de RLS tabelados, regras de GRANT, padrão obrigatório para SECURITY DEFINER com ownership manual, e instruções do bloco de verificação pós-deploy.
+
+### Corrigido
+
+- Políticas RLS de `transactions` que no commit anterior tinham `SELECT 1 FROM members` sem cláusula `WHERE` (placeholder incompleto). Corrigido para `WHERE members.id = transactions.member_id AND members.user_id = get_current_user_id()`.
+
+---
+
 ## [1.1.0] — 2026-03-09
 
 ### Adicionado
