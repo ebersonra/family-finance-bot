@@ -58,7 +58,11 @@ export async function parseTransaction(
       messages: [{ role: 'user', content: message }],
     });
 
-    const raw = (response.content[0] as Anthropic.TextBlock).text.trim();
+    const raw = (response.content[0] as Anthropic.TextBlock).text
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')   // remove abertura de bloco markdown
+      .replace(/\s*```$/,         '')     // remove fechamento de bloco markdown
+      .trim();
     const parsed = JSON.parse(raw) as ParsedTransaction;
 
     // Validação mínima
