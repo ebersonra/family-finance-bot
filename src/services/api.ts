@@ -72,39 +72,29 @@ export class ApiError extends Error {
 }
 
 // ═══════════════════════════════════════════════
-// 1. USER AUTH  ·  POST /user-auth
+// 1. GET USER BY PHONE  ·  GET /get-user-by-phone
 // ─────────────────────────────────────────────
-// Regra: SEMPRE buscar o usuário existente.
-// Usa action "getOrCreate" — o servidor retorna o
-// registro já existente quando o telefone já está
-// cadastrado, sem duplicar entradas.
+// Endpoint dedicado ao WhatsApp bot (tag: WhatsAppBot).
+// Retorna apenas campos não-sensíveis: id, phone, email, name.
+// - CWE-200: projeção mínima, nenhum dado crítico exposto
+// - CWE-20:  telefone normalizado server-side (dígitos, 10-15 chars)
+// - CWE-89:  RPC parametrizada no backend
 // ═══════════════════════════════════════════════
 
-export interface UserAuthResponse {
-  user: AuthUser;
-  isNew?: boolean;
-}
-
 /**
- * Busca o usuário pelo telefone via /user-auth.
- * Retorna null se o servidor retornar 404 (usuário não cadastrado).
+ * Busca o usuário pelo número de telefone via GET /get-user-by-phone.
+ * Retorna null se o número não estiver cadastrado (HTTP 404).
  *
- * @security Nunca cria usuário sem intenção explícita do app principal.
- *           O bot apenas consome usuários já registrados.
+ * Aceita os formatos enviados pelo WhatsApp:
+ * - `5541999999999`  (13 dígitos, BR internacional)
+ * - `+5541999999999` (com prefixo `+`)
+ * - `554199999 9999` (com espaços)
+ *
+ * @security Endpoint somente-leitura — nunca cria nem altera registros.
  */
 export async function findUserByPhone(phone: string): Promise<AuthUser | null> {
   try {
-    const data = await request<UserAuthResponse>('/user-auth', {
-      method: 'POST',
-      body: JSON.stringify({
-        action: 'getOrCreate',
-        phone,
-        // Campos mínimos — o servidor retorna o registro existente sem criar
-        name: '',
-        email: '',
-      }),
-    });
-    return data.user ?? null;
+    return await request<AuthUser>(`/get-user-by-phone${toQS({ phone })}`);
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null;
     throw err;

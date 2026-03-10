@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
-.wwebjs_auth/      # sessão local do WhatsApp (nunca commitar)
+# sessão local do WhatsApp (nunca commitar)
+.wwebjs_auth/
 .wwebjs_cache/
 *.log

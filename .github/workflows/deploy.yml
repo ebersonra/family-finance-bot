@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────
+# FamilyFinanceBot · CI/CD — Deploy automático para Oracle Cloud VM
+#
+# Dispara em todo push para a branch main.
+# Pipeline:
+#   1. build  → valida a compilação TypeScript no runner do GitHub
+#   2. deploy → conecta na VM via SSH, atualiza o código e reinicia o PM2
+# ─────────────────────────────────────────────────────────────────
+
+name: Deploy to Oracle VM
+
+on:
+  push:
+    branches:
+      - main
+
+  # Permite disparar o deploy manualmente pela aba "Actions" do GitHub
+  workflow_dispatch:
+
+jobs:
+  # ── 1. Validação ─────────────────────────────────────────────────
+  build:
+    name: Build & Validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Compilar TypeScript
+        run: npm run build
+
+  # ── 2. Deploy ────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Oracle VM
+    runs-on: ubuntu-latest
+    needs: build # só executa se o build passar
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: ${{ secrets.ORACLE_SSH_PORT || 22 }}
+          # Timeout de 5 minutos (npm ci pode demorar na VM com 1 GB RAM)
+          command_timeout: 5m
+          script: |
+            set -e
+
+            echo "📦 Atualizando código..."
+            cd ~/family-finance-bot
+            git pull origin main
+
+            echo "🔧 Instalando dependências de produção..."
+            npm ci --omit=dev
+
+            echo "🔨 Compilando TypeScript..."
+            npm run build
+
+            echo "🔄 Reiniciando o bot com PM2..."
+            pm2 describe family-finance-bot > /dev/null 2>&1 \
+              && pm2 restart family-finance-bot \
+              || pm2 start dist/index.js --name "family-finance-bot" --no-daemon
+
+            pm2 save
+
+            echo "✅ Deploy concluído!"
+            pm2 status family-finance-bot

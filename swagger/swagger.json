@@ -54,14 +54,16 @@
     {
       "name": "FamilyFinance",
       "description": "Bot de finanças familiares via WhatsApp. Gerencia membros, transações, metas e resumo mensal. Requer exec_with_user_context (RLS) para todas as operações."
+    },
+    {
+      "name": "WhatsAppBot",
+      "description": "Endpoints consumidos pelo WhatsApp bot para resolução de usuários e operações de suporte. Retornam apenas campos não-sensíveis projetados (CWE-200)."
     }
   ],
   "paths": {
     "/add-shopping-list-item": {
       "post": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "addShoppingListItem",
         "summary": "Adicionar item à lista de compras",
         "description": "Cria um novo item em uma lista existente. Utilizado por `SecureAPI.addShoppingListItem()`.",
@@ -146,9 +148,7 @@
     },
     "/create-category": {
       "post": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "operationId": "createCategory",
         "summary": "Create Category",
         "description": "Handler for `/create-category`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -190,9 +190,7 @@
     },
     "/create-market": {
       "post": {
-        "tags": [
-          "Markets"
-        ],
+        "tags": ["Markets"],
         "operationId": "createMarket",
         "summary": "Create Market",
         "description": "Handler for `/create-market`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -250,9 +248,7 @@
     },
     "/create-payment-method": {
       "post": {
-        "tags": [
-          "Payments"
-        ],
+        "tags": ["Payments"],
         "operationId": "createPaymentMethod",
         "summary": "Create Payment Method",
         "description": "Handler for `/create-payment-method`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -275,10 +271,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "user_id",
-                  "type"
-                ],
+                "required": ["user_id", "type"],
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -286,13 +279,7 @@
                   },
                   "type": {
                     "type": "string",
-                    "enum": [
-                      "credit_card",
-                      "debit_card",
-                      "pix",
-                      "cash",
-                      "other"
-                    ]
+                    "enum": ["credit_card", "debit_card", "pix", "cash", "other"]
                   },
                   "label": {
                     "type": "string",
@@ -312,9 +299,7 @@
     },
     "/create-product": {
       "post": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "createProduct",
         "summary": "Create Product",
         "description": "Handler for `/create-product`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -352,9 +337,7 @@
     },
     "/create-shopping-list": {
       "post": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "createShoppingList",
         "summary": "Create Shopping List",
         "description": "Creates a new shopping list. Items are **optional** at creation time — you can create an empty list and add items later via `POST /add-shopping-list-item`. A list can hold at most 100 items.",
@@ -380,11 +363,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "user_id",
-                  "title",
-                  "shopping_date"
-                ],
+                "required": ["user_id", "title", "shopping_date"],
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -453,9 +432,7 @@
     },
     "/delete-market": {
       "delete": {
-        "tags": [
-          "Markets"
-        ],
+        "tags": ["Markets"],
         "operationId": "deleteMarket",
         "summary": "Delete Market",
         "description": "Netlify Function to delete a market (soft delete) Marks a market as deleted without removing from database No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -497,9 +474,7 @@
     },
     "/delete-product": {
       "delete": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "deleteProduct",
         "summary": "Delete Product",
         "description": "Delete Product API Netlify Function to soft delete a product Security: Soft delete (sets deleted_at), maintains data integrity, prevents SQL injection No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -522,10 +497,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "product_id",
-                  "user_id"
-                ],
+                "required": ["product_id", "user_id"],
                 "properties": {
                   "product_id": {
                     "type": "string",
@@ -548,9 +520,7 @@
     },
     "/delete-shopping-list": {
       "delete": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "deleteShoppingList",
         "summary": "Delete Shopping List",
         "description": "Delete Shopping List Netlify Function to soft delete a shopping list No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -573,10 +543,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "id",
-                  "user_id"
-                ],
+                "required": ["id", "user_id"],
                 "properties": {
                   "id": {
                     "type": "string",
@@ -599,9 +566,7 @@
     },
     "/find-market": {
       "post": {
-        "tags": [
-          "Markets"
-        ],
+        "tags": ["Markets"],
         "operationId": "findMarket",
         "summary": "Find Market",
         "description": "Find Market - Netlify Function Find market by place_id or name Architecture: MVC Pattern API → Controller → Service → Repository → Database Security: - ✅ Backend Proxy Pattern (credentials server-side only) - ✅ Input validation in controller layer - ✅ SQL injection prevention via parameterized queries @version 2.0.0 (Refactored to follow MVC) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -643,9 +608,7 @@
     },
     "/get-address-by-cep": {
       "get": {
-        "tags": [
-          "Address"
-        ],
+        "tags": ["Address"],
         "operationId": "getAddressByCep",
         "summary": "Consultar endereço por CEP",
         "description": "Retorna o endereço completo (logradouro, bairro, cidade, UF, estado, IBGE, DDD) a partir de um CEP brasileiro.\n\nProxy seguro para a API pública **ViaCEP** (`https://viacep.com.br`).\nAceita CEP com ou sem máscara (ex: `01310-100` ou `01310100`).\n\n### Segurança\n- **CWE-20** – Validação de formato (8 dígitos) antes da chamada externa\n- **CWE-209** – Mensagens de erro sanitizadas, sem stack trace\n- **OWASP A05:2021** – CORS centralizado via `wrapHandler`\n\n### Arquitetura\n`GET /api/get-address-by-cep` → `wrapHandler` → `addressController` → `viaCepService` → ViaCEP API",
@@ -770,9 +733,7 @@
     },
     "/get-all-markets": {
       "get": {
-        "tags": [
-          "Markets"
-        ],
+        "tags": ["Markets"],
         "operationId": "getMarkets",
         "summary": "Listar todos os mercados ativos",
         "description": "Retorna todos os mercados cadastrados e ativos. Utilizado por `SecureAPI.getMarkets()`.",
@@ -815,9 +776,7 @@
     },
     "/get-categories-by-user": {
       "get": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "operationId": "getCategoriesByUser",
         "summary": "Get Categories By User",
         "description": "Get Categories By User API Endpoint Uses MVC pattern: Controller → Service → Repository No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -849,9 +808,7 @@
     },
     "/get-category-keywords": {
       "get": {
-        "tags": [
-          "Categories"
-        ],
+        "tags": ["Categories"],
         "operationId": "getCategoryKeywords",
         "summary": "Get Category Keywords",
         "description": "Get Category Keywords by User Netlify Function to retrieve category keywords for Hybrid Matcher @security UUID validation, RLS enforcement via exec_with_user_context @performance Single optimized RPC query, Edge + Client caching No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -883,9 +840,7 @@
     },
     "/get-company-by-cnpj": {
       "get": {
-        "tags": [
-          "Integration"
-        ],
+        "tags": ["Integration"],
         "operationId": "getCompanyByCnpj",
         "summary": "Get Company By Cnpj",
         "description": "Get Company by CNPJ API Endpoint Architecture: MVC Pattern API → Controller → Service → Repository → Database Fetches company data by CNPJ with caching strategy GET /.netlify/functions/get-company-by-cnpj?cnpj=<cnpj> External API: BrasilAPI (https://brasilapi.com.br) Cache: company_cache table (24h expiration) @version 2.0.0 (Refactored to follow MVC) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -917,9 +872,7 @@
     },
     "/get-dashboard-metrics": {
       "get": {
-        "tags": [
-          "Financial"
-        ],
+        "tags": ["Financial"],
         "operationId": "getDashboardMetrics",
         "summary": "Get Dashboard Metrics",
         "description": "Get Dashboard Metrics API Handler Endpoint: /api/get-dashboard-metrics Method: GET Query Parameters: - user_id (required): UUID of the user Returns dashboard metrics including: - Shopping lists status (completed/total) - Cart total value - Collaborators - Integration status Security: Backend Proxy Pattern (Supabase credentials server-side only) Architecture: MVC Pattern (Controller → Service → Repository) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -954,9 +907,7 @@
     },
     "/get-feature-flags": {
       "get": {
-        "tags": [
-          "Feature Flags"
-        ],
+        "tags": ["Feature Flags"],
         "operationId": "getFeatureFlags",
         "summary": "Obter feature flags em runtime",
         "description": "Endpoint público consumido pelo mobile app para obter o estado das feature flags em runtime, sem necessidade de rebuild.\n\nSuporte a dois modos:\n- **Sem parâmetro** → retorna todas as flags (`{ flags: { [key]: boolean }, cachedAt: ISO8601 }`)\n- **Com `?key=<k>`** → retorna o valor de uma flag específica (`{ key, enabled }`).\n\nAs flags são armazenadas no Supabase (`feature_flags`) e cacheadas em memória por **60 segundos**. Toggling via Supabase Table Editor, sem redeploy.\n\n### Segurança\n- **CWE-20** – Sanitização do query param `key` (regex `^[a-z0-9_-]+$`)\n- **CWE-209** – Erros retornam HTTP 422 com mensagem genérica (sem stack trace)\n- **OWASP A05:2021** – CORS centralizado via `wrapHandler`\n\n### Arquitetura\n`GET /api/get-feature-flags` → `wrapHandler` → `featureFlagController` → `featureFlagService` → `featureFlagRepository` → Supabase",
@@ -1002,10 +953,7 @@
                           "example": "2026-03-04T12:00:00.000Z"
                         }
                       },
-                      "required": [
-                        "flags",
-                        "cachedAt"
-                      ]
+                      "required": ["flags", "cachedAt"]
                     },
                     {
                       "title": "Flag específica",
@@ -1022,10 +970,7 @@
                           "example": false
                         }
                       },
-                      "required": [
-                        "key",
-                        "enabled"
-                      ]
+                      "required": ["key", "enabled"]
                     }
                   ]
                 }
@@ -1065,9 +1010,7 @@
     },
     "/get-financial-by-categories": {
       "get": {
-        "tags": [
-          "Financial"
-        ],
+        "tags": ["Financial"],
         "operationId": "getFinancialByCategories",
         "summary": "Get Financial By Categories",
         "description": "Get Financial Data by Categories API Endpoint Retrieves financial breakdown by product categories with optional filters GET /.netlify/functions/get-financial-by-categories?user_id=<uuid>&month=<YYYY-MM>&category=<string>&market_id=<uuid> Query Parameters: - user_id (required): User UUID - month (optional): Filter by month in YYYY-MM format - category (optional): Filter by specific category name - market_id (optional): Filter by market UUID - limit (optional): Maximum results (default: 100, max: 1000) - offset (optional): Pagination offset (default: 0) SECURITY IMPLEMENTATION: - UUID Validation: All UUID inputs validated via regex (CWE-89) - Month Format Validation: YYYY-MM regex prevents injection - Category Sanitization: Length limit + encoding (XSS prevention) - Explicit User Filtering: All queries filtered by validated user_id (CWE-284) - Limit Validation: Prevents resource exhaustion (CWE-400) - Service Role Key: RLS bypassed securely with explicit filtering - Error Sanitization: Production-safe error messages (CWE-209) MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID + month regex validation) - CWE-284: Improper Access Control (Explicit user_id filtering) - CWE-79: XSS (Category sanitization, though backend context) - CWE-400: Resource Exhaustion (Limit caps) - CWE-209: Information Exposure (Error sanitization) @author Sentinel Coder @version 2.0.0 (MVC Refactored) @returns {Object} Array of categories with aggregated financial data No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -1151,9 +1094,7 @@
     },
     "/get-financial-by-lists": {
       "get": {
-        "tags": [
-          "Financial"
-        ],
+        "tags": ["Financial"],
         "operationId": "getFinancialByLists",
         "summary": "Get Financial By Lists",
         "description": "Get Financial Data by Shopping Lists API Endpoint Retrieves financial breakdown by shopping lists with optional filters GET /.netlify/functions/get-financial-by-lists?user_id=<uuid>&month=<YYYY-MM>&market_id=<uuid> Query Parameters: - user_id (required): User UUID - month (optional): Filter by month in YYYY-MM format - market_id (optional): Filter by market UUID - limit (optional): Maximum results (default: 100, max: 1000) - offset (optional): Pagination offset (default: 0) SECURITY IMPLEMENTATION: - UUID Validation: All UUID inputs validated via regex (CWE-89) - Month Format Validation: YYYY-MM regex prevents injection - Explicit User Filtering: All queries filtered by validated user_id (CWE-284) - Limit Validation: Prevents resource exhaustion - Service Role Key: RLS bypassed securely with explicit filtering - Error Sanitization: Production-safe error messages (CWE-209) MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID regex + month format validation) - CWE-284: Improper Access Control (Explicit user_id filtering) - CWE-400: Resource Exhaustion (Limit validation and caps) - CWE-209: Information Exposure (Error sanitization) @author Sentinel Coder @version 2.0.0 (MVC Refactored) @returns {Object} Array of shopping lists with financial data No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -1226,9 +1167,7 @@
     },
     "/get-financial-summary": {
       "get": {
-        "tags": [
-          "Financial"
-        ],
+        "tags": ["Financial"],
         "operationId": "getFinancialSummary",
         "summary": "Get Financial Summary",
         "description": "Get Financial Summary API Endpoint Retrieves comprehensive financial statistics for a user GET /.netlify/functions/get-financial-summary?user_id=<uuid> SECURITY IMPLEMENTATION: - UUID Validation: Strict regex prevents SQL injection (CWE-89) - Service Role Key: Bypasses RLS securely with explicit user_id filtering (CWE-284) - Error Sanitization: No stack traces in production (CWE-209) - CORS Configured: Allows authorized cross-origin requests - Read-Only: GET method only, no data mutation (CWE-352) MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID regex + RPC function with parameterized query) - CWE-284: Improper Access Control (RLS enforced via user_id in RPC) - CWE-209: Information Exposure (Sanitized error messages) - CWE-352: CSRF (Stateless GET, no state mutation) @author Sentinel Coder @version 2.0.0 (MVC Refactored) @returns {Object} Financial summary with totals, averages, favorites No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -1261,9 +1200,7 @@
     },
     "/get-financial-items-by-period": {
       "get": {
-        "tags": [
-          "Financial"
-        ],
+        "tags": ["Financial"],
         "operationId": "getFinancialItemsByPeriod",
         "summary": "Itens comprados por período (Mobile)",
         "description": "Retorna todos os itens comprados (listas ativas e concluídas) dentro de um período, com dados pré-agregados por categoria, mercado e dia. Projetado **exclusivamente** para o app mobile Bargainly.\n\nAceita período predefinido **ou** faixa de datas explícita:\n- **Predefinido:** `period=7D` | `15D` | `30D` | `60D`\n- **Explícito:** `start_date` + `end_date` em `YYYY-MM-DD` ou `DD/MM/YYYY`\n\n### Formato de Resposta\n```json\n{\n  \"meta\": { \"user_id\": \"...\", \"period\": { \"start\": \"2026-02-04\", \"end\": \"2026-03-04\", \"label\": \"30D\" }, \"generated_at\": \"...\" },\n  \"summary\": { \"total_items\": 42, \"total_lists\": 5, \"total_markets\": 3, \"total_amount\": 487.50, \"average_amount_per_list\": 97.50 },\n  \"by_category\": [{ \"category\": \"Hortifruti\", \"items_count\": 8, \"total_amount\": 120.00, \"percentage\": 24.6, \"items\": [...] }],\n  \"by_market\": [{ \"market_name\": \"Angeloni\", \"lists_count\": 3, \"total_amount\": 310.00, \"by_category\": [...] }],\n  \"daily\": [{ \"date\": \"2026-03-01\", \"total\": 97.50, \"lists_count\": 1 }]\n}\n```\n\n### Segurança\n- **CWE-89** – `user_id` validado via UUID regex; datas validadas por regex antes de chegar ao SQL\n- **CWE-284** – RPC `get_items_by_period` com `SECURITY DEFINER` e filtro `user_id` explícito em PostgreSQL\n- **CWE-346** – CORS centralizado via `wrapHandler` (origin allowlist + rate limiting)\n- **CWE-209** – Stack traces nunca expostos em produção; mensagem genérica em 422/500\n\n### Arquitetura\n`GET /api/get-financial-items-by-period` → `wrapHandler` → `financialController.getItemsByPeriod` → `financialService.getItemsByPeriod` → `financialRepository.getItemsByPeriod` → Supabase RPC `get_items_by_period`\n\n@author Sentinel Coder\n@version 1.0.0\n@migration database/202603050001/create_get_items_by_period_function.sql",
@@ -1284,12 +1221,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "7D",
-                "15D",
-                "30D",
-                "60D"
-              ]
+              "enum": ["7D", "15D", "30D", "60D"]
             },
             "description": "Período predefinido. Use este **ou** `start_date` + `end_date`.",
             "example": "30D"
@@ -1555,9 +1487,7 @@
     },
     "/get-markets": {
       "get": {
-        "tags": [
-          "Markets"
-        ],
+        "tags": ["Markets"],
         "operationId": "getUserMarkets",
         "summary": "Listar mercados do usuário",
         "description": "Retorna os mercados associados a um usuário específico. Diferente de `/get-all-markets` (que lista todos), este endpoint filtra por `user_id`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -1605,9 +1535,7 @@
     },
     "/get-payment-methods": {
       "get": {
-        "tags": [
-          "Payments"
-        ],
+        "tags": ["Payments"],
         "operationId": "getPaymentMethods",
         "summary": "Get Payment Methods",
         "description": "Handler for `/get-payment-methods`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -1639,9 +1567,7 @@
     },
     "/get-product-by-description-or-gtin": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "getProductByDescriptionOrGtin",
         "summary": "Get Product By Description Or Gtin",
         "description": "Valida e sanitiza query string para prevenir injection attacks @param {string} query - Query string a ser validada @returns {string|null} - Query sanitizada ou null se inválida No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -1694,9 +1620,7 @@
     },
     "/get-product-by-gtin": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "getProductByGtin",
         "summary": "Buscar produto por GTIN / código de barras",
         "description": "Consulta o catálogo **Cosmos API** via proxy seguro. Utilizado por `SecureAPI.getProductByGtin()`.\n\nValidação de entrada: GTIN deve ter entre 8 e 14 dígitos numéricos.",
@@ -1760,9 +1684,7 @@
     },
     "/get-product-categories": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "getProductCategories",
         "summary": "Get Product Categories",
         "description": "Handler for `/get-product-categories`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -1794,9 +1716,7 @@
     },
     "/get-products": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "getProducts",
         "summary": "Buscar produtos por descrição",
         "description": "Pesquisa produtos cadastrados por texto livre. Utilizado por `SecureAPI.getProducts()`.",
@@ -1870,9 +1790,7 @@
     },
     "/get-products-by-market": {
       "get": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "getProductsByMarket",
         "summary": "Buscar produtos por mercado e usuário",
         "description": "Retorna todos os produtos cadastrados por um usuário em um mercado específico. Endpoint mobile-first: requer `user_id` e `market_id`. Suporta filtros opcionais de texto, categoria, paginação e ordenação.",
@@ -1928,12 +1846,7 @@
             "description": "Campo para ordenação dos resultados",
             "schema": {
               "type": "string",
-              "enum": [
-                "created_at",
-                "name",
-                "price",
-                "updated_at"
-              ],
+              "enum": ["created_at", "name", "price", "updated_at"],
               "default": "created_at"
             }
           },
@@ -1944,10 +1857,7 @@
             "description": "Direção da ordenação",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "desc"
             }
           },
@@ -1990,9 +1900,7 @@
                       }
                     }
                   },
-                  "required": [
-                    "products"
-                  ]
+                  "required": ["products"]
                 },
                 "example": {
                   "products": [
@@ -2097,9 +2005,7 @@
     },
     "/get-shopping-list": {
       "get": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "getShoppingList",
         "summary": "Buscar lista de compras por ID",
         "description": "Retorna uma lista de compras com todos os seus itens. Utilizado por `SecureAPI.getShoppingList()`.",
@@ -2162,9 +2068,7 @@
     },
     "/get-shopping-list-by-code": {
       "get": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "getShoppingListByCode",
         "summary": "Buscar lista de compras por código de compartilhamento",
         "description": "Permite acesso à lista por código público. Utilizado por `SecureAPI.getShoppingListByCode()`.",
@@ -2214,9 +2118,7 @@
     },
     "/get-shopping-lists": {
       "get": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "getShoppingLists",
         "summary": "Get Shopping Lists",
         "description": "Handler for `/get-shopping-lists`. No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -2251,9 +2153,7 @@
     },
     "/get-shopping-lists-by-market": {
       "get": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "getShoppingListsByMarket",
         "summary": "Listar listas de compras por mercado (Mobile)",
         "description": "Retorna listas de compras ativas e concluídas de um usuário filtradas por mercado. Nunca retorna listas canceladas ou deletadas (soft-deleted).\n\nFormato de resposta: `{ total_lists, total_amount, lists[] }`\n\n### Segurança\n- **CWE-89**: UUID regex previne SQL injection\n- **CWE-284**: Filtragem explícita por `user_id` + `market_id` garante isolamento de dados\n- **CWE-209**: Mensagens de erro sanitizadas em produção",
@@ -2287,10 +2187,7 @@
             "description": "Filtro de status. Se omitido retorna listas ativas **e** concluídas.",
             "schema": {
               "type": "string",
-              "enum": [
-                "active",
-                "completed"
-              ]
+              "enum": ["active", "completed"]
             }
           }
         ],
@@ -2301,11 +2198,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "total_lists",
-                    "total_amount",
-                    "lists"
-                  ],
+                  "required": ["total_lists", "total_amount", "lists"],
                   "properties": {
                     "total_lists": {
                       "type": "integer",
@@ -2333,10 +2226,7 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": [
-                              "active",
-                              "completed"
-                            ],
+                            "enum": ["active", "completed"],
                             "example": "active"
                           },
                           "total_amount": {
@@ -2426,9 +2316,7 @@
     },
     "/get-user-presence": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "getUserPresence",
         "summary": "Get User Presence",
         "description": "Get User Presence from Redis Cache Busca dados de um usuário online para exibição de presença @endpoint GET /.netlify/functions/get-user-presence?user_id=xxx&share_code=xxxx @security Backend-only (Redis credentials não expostas) @compliance CWE-200 (Information Disclosure Protection) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -2469,9 +2357,7 @@
     },
     "/get-user-profile": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "getUserProfile",
         "summary": "Get User Profile",
         "description": "Get User Profile API Endpoint Retrieves user profile information including join date GET /.netlify/functions/get-user-profile?user_id=<uuid> No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -2501,11 +2387,75 @@
         "x-last-synced": "2026-02-28"
       }
     },
+    "/get-user-by-phone": {
+      "get": {
+        "tags": ["WhatsAppBot", "Users"],
+        "operationId": "getUserByPhone",
+        "summary": "Buscar usuário por telefone (WhatsApp Bot)",
+        "description": "Resolve um usuário a partir do número de telefone recebido pelo WhatsApp bot.\n\nAceita todos os formatos enviados pelo WhatsApp:\n- `5541999999999` (13 dígitos, formato BR internacional)\n- `+5541999999999` (com prefixo `+`)\n- `554199999 9999` (com espaços)\n\nO número é normalizado internamente (somente dígitos, 10-15 chars) antes da consulta ao banco.\n\nRetorna apenas **campos não-sensíveis**: `id`, `phone`, `email`, `name`.\n\n### Segurança\n- **CWE-20** – Validação e normalização de telefone antes de qualquer query\n- **CWE-89** – SQL Injection prevenido por RPC parametrizada (somente dígitos)\n- **CWE-200** – Projeção de campos: nenhum dado sensível exposto\n- **CWE-209** – Stack traces nunca expostos (mensagem genérica em 500)\n- **OWASP A05:2021** – CORS centralizado via `wrapHandler`\n- **CWE-400** – Rate limiting via `wrapHandler`\n\n### Arquitetura\n`GET /api/get-user-by-phone?phone=<phone>` → `wrapHandler` → `authController.getUserByPhone` → `authService.getUserByPhone` → `authRepository.getUserByPhone` → RPC `get_user_by_phone`",
+        "parameters": [
+          {
+            "name": "phone",
+            "in": "query",
+            "required": true,
+            "description": "Número de telefone recebido do WhatsApp. Aceita `5541999999999`, `+5541999999999` ou `554199999 9999`.",
+            "schema": {
+              "type": "string",
+              "example": "5541999999999"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usuário encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserByPhoneResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parâmetro `phone` ausente ou com formato inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Invalid phone number format — expected 10-15 digits after normalisation"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Nenhum usuário encontrado com este telefone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "User not found"
+                }
+              }
+            }
+          },
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "manual",
+        "x-last-synced": "2026-03-09"
+      }
+    },
     "/get-user-settings": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "getUserSettings",
         "summary": "Get User Settings",
         "description": "Get User Settings API Endpoint Retrieves user settings/preferences from the preferences table GET /.netlify/functions/get-user-settings?user_id=<uuid> Architecture: API → Controller → Service → Repository → Database No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -2537,9 +2487,7 @@
     },
     "/get-user-statistics": {
       "get": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "getUserStatistics",
         "summary": "Get User Statistics",
         "description": "Get User Statistics API Endpoint Architecture: MVC Pattern API → Controller → Service → Repository → Database Retrieves comprehensive statistics for a user by aggregating data from shopping lists GET /.netlify/functions/get-user-statistics?user_id=<uuid> SECURITY IMPLEMENTATION: - Backend Proxy Pattern: Database credentials server-side only - Input validation: UUID format validation in controller layer - Proper error handling: No stack trace leakage in production - Read-only: GET method only, no data mutation - CORS configured: Allows cross-origin requests from authorized domains MITIGATED VULNERABILITIES: - CWE-89: SQL Injection (UUID validation + parameterized queries) - CWE-284: Improper Access Control (explicit user_id filtering) - CWE-209: Information Exposure (Error messages sanitized in production) - CWE-352: CSRF (Stateless GET endpoint, no state mutation) @version 2.0.0 (Refactored to follow MVC) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -2571,9 +2519,7 @@
     },
     "/mark-beta-used": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "operationId": "markBetaUsed",
         "summary": "Mark Beta Used",
         "description": "Netlify Function - Mark Beta Access as Used Endpoint: POST /api/mark-beta-used Body: { phone: string, code: string } Segurança: - Validação de método HTTP (apenas POST) - CORS configurado - Rate limiting (5 tentativas por 15 min por IP) - Validação de body params no controller - Erros sem exposição de stack trace Fluxo: API → Controller → Service → Repository → Database (RPC) @version 1.0.0 No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -2599,10 +2545,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "phone",
-                  "code"
-                ],
+                "required": ["phone", "code"],
                 "properties": {
                   "phone": {
                     "type": "string"
@@ -2623,9 +2566,7 @@
     },
     "/refresh-token": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "operationId": "refreshToken",
         "summary": "Renovar JWT Session (Refresh Token)",
         "description": "Emite um novo `accessToken` (15 min) e um `refreshToken` rotacionado (7 dias). O token antigo é revogado imediatamente após uso (**token rotation** — CWE-384 prevention).\n\nUsado pelo app móvel quando o access token expira. Armazene o novo `refreshToken` (substitui o anterior).\n\n### Segurança\n- **CWE-384**: Token rotation — cada refresh revoga o token antigo e emite um novo\n- **CWE-522**: Apenas o SHA-256 do refresh token é armazenado no banco (nunca o raw)\n- **CWE-209**: Mensagens de erro sanitizadas em produção\n- **OWASP A07:2021**: Falha de identificação e autenticação prevenida via TTL curto no access token\n\n### Arquitetura\n`POST /api/refresh-token` → `wrapHandler` → `buildHandler(authCtrl)` → `sessionService.refreshSession()` → `sessionRepository`\n\n@version 1.0.0",
@@ -2635,9 +2576,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "refreshToken"
-                ],
+                "required": ["refreshToken"],
                 "properties": {
                   "refreshToken": {
                     "type": "string",
@@ -2693,10 +2632,7 @@
                     },
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "SESSION_INVALID",
-                        "SESSION_EXPIRED"
-                      ],
+                      "enum": ["SESSION_INVALID", "SESSION_EXPIRED"],
                       "description": "`SESSION_INVALID` = token não encontrado ou revogado; `SESSION_EXPIRED` = TTL de 7 dias ultrapassado"
                     }
                   }
@@ -2733,9 +2669,7 @@
     },
     "/remove-shopping-list-item": {
       "delete": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "removeShoppingListItem",
         "summary": "Remover item da lista de compras",
         "description": "Remove permanentemente um item da lista. Utilizado por `SecureAPI.removeShoppingListItem()`.",
@@ -2789,9 +2723,7 @@
     },
     "/remove-user-presence": {
       "delete": {
-        "tags": [
-          "Realtime"
-        ],
+        "tags": ["Realtime"],
         "operationId": "removeUserPresence",
         "summary": "Remove User Presence",
         "description": "Remove User Presence from Redis Cache Remove dados de um usuário que saiu da lista @endpoint DELETE /.netlify/functions/remove-user-presence @security Backend-only (Redis credentials não expostas) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -2833,9 +2765,7 @@
     },
     "/request-otp": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "operationId": "requestOTP",
         "summary": "Solicitar código OTP por e-mail",
         "description": "Envia um código OTP de 6 dígitos para o e-mail informado via **Resend**.\n\n**Rate Limit:** 3 requisições por 15 minutos por e-mail.\n\nUtilizado por `SecureAPI.requestOTP()` e `SecureAPI.resendOTP()`.",
@@ -2845,9 +2775,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email"
-                ],
+                "required": ["email"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -2905,9 +2833,7 @@
     },
     "/scan-invoice": {
       "get": {
-        "tags": [
-          "Invoices"
-        ],
+        "tags": ["Invoices"],
         "operationId": "getInvoiceByAccessKey",
         "summary": "Buscar nota fiscal por chave de acesso",
         "description": "Recupera dados de uma NFC-e já processada pela chave de acesso (44 dígitos). Requer autenticação via `userId`.",
@@ -2967,9 +2893,7 @@
         "x-last-synced": "2026-02-28"
       },
       "post": {
-        "tags": [
-          "Invoices"
-        ],
+        "tags": ["Invoices"],
         "operationId": "scanInvoice",
         "summary": "Processar QR Code de nota fiscal (NFC-e)",
         "description": "Recebe o conteúdo do QR Code de uma NFC-e e retorna os dados estruturados da nota: itens, valores, mercado emissor.",
@@ -2991,9 +2915,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "qrCodeContent"
-                ],
+                "required": ["qrCodeContent"],
                 "properties": {
                   "qrCodeContent": {
                     "type": "string",
@@ -3059,9 +2981,7 @@
     },
     "/search-nearby-markets": {
       "post": {
-        "tags": [
-          "Markets"
-        ],
+        "tags": ["Markets"],
         "operationId": "searchNearbyMarkets",
         "summary": "Buscar mercados próximos (Google Places)",
         "description": "Pesquisa mercados próximos usando a Google Places API via backend proxy. Utilizado por `SecureAPI.searchNearbyMarkets()`.",
@@ -3094,10 +3014,7 @@
                 "latitude": -23.5505,
                 "longitude": -46.6333,
                 "radius": 5000,
-                "types": [
-                  "supermarket",
-                  "grocery_or_supermarket"
-                ],
+                "types": ["supermarket", "grocery_or_supermarket"],
                 "user_id": "550e8400-e29b-41d4-a716-446655440000"
               }
             }
@@ -3130,9 +3047,7 @@
     },
     "/update-market": {
       "put": {
-        "tags": [
-          "Markets"
-        ],
+        "tags": ["Markets"],
         "operationId": "updateMarket",
         "summary": "Update Market",
         "description": "Netlify Function to update a market Updates market information (name, address, cnpj, phone, email, website) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -3185,9 +3100,7 @@
     },
     "/update-product": {
       "put": {
-        "tags": [
-          "Products"
-        ],
+        "tags": ["Products"],
         "operationId": "updateProduct",
         "summary": "Update Product",
         "description": "Update Product API Netlify Function to update product data (category, market, price) Security: Input validation, XSS prevention, SQL injection protection via Supabase No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -3210,10 +3123,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "product_id",
-                  "user_id"
-                ],
+                "required": ["product_id", "user_id"],
                 "properties": {
                   "product_id": {
                     "type": "string",
@@ -3254,9 +3164,7 @@
     },
     "/update-shopping-list": {
       "put": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "updateShoppingList",
         "summary": "Atualizar lista de compras",
         "description": "Atualiza campos de uma lista de compras existente. Utilizado por `SecureAPI.updateShoppingList()`.",
@@ -3328,9 +3236,7 @@
     },
     "/update-shopping-list-item": {
       "put": {
-        "tags": [
-          "Shopping Lists"
-        ],
+        "tags": ["Shopping Lists"],
         "operationId": "updateShoppingListItem",
         "summary": "Atualizar item da lista de compras",
         "description": "Atualiza campos de um item. Utilizado por `SecureAPI.updateShoppingListItem()`.",
@@ -3395,9 +3301,7 @@
     },
     "/update-user-onboarding": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "completeUserOnboarding",
         "summary": "Concluir onboarding do usuário",
         "description": "Registra a aceitação dos termos de uso e mercado selecionado no onboarding. Utilizado por `SecureAPI.completeUserOnboarding()`.",
@@ -3407,9 +3311,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "userId"
-                ],
+                "required": ["userId"],
                 "properties": {
                   "userId": {
                     "type": "string",
@@ -3458,9 +3360,7 @@
     },
     "/update-user-presence": {
       "put": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "updateUserPresence",
         "summary": "Update User Presence",
         "description": "Update User Presence in Redis Cache Armazena dados de usuários online para exibição de presença @endpoint PUT /.netlify/functions/update-user-presence @security Backend-only (Redis credentials não expostas) @compliance CWE-200 (Information Disclosure Protection) No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -3506,9 +3406,7 @@
     },
     "/update-user-profile": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "updateUserProfile",
         "summary": "Update User Profile",
         "description": "Update User Profile API Endpoint Updates user profile information (name, phone, email) using Supabase API POST /.netlify/functions/update-user-profile Body: { user_id: <uuid>, name, phone, email } No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -3590,9 +3488,7 @@
     },
     "/update-user-settings": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "updateUserSettings",
         "summary": "Update User Settings",
         "description": "Update User Settings API Endpoint Updates user settings/preferences in the preferences table POST /.netlify/functions/update-user-settings Body: { user_id: <uuid>, settings: { notification: {...}, privacy: {...} } } No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -3634,9 +3530,7 @@
     },
     "/update-user-terms": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "updateUserTerms",
         "summary": "Update User Terms",
         "description": "Update User Terms API Endpoint Endpoint para atualizar aceite de termos de usuários existentes (LGPD Retroactive Compliance - Lei 13.709/2018) Este endpoint é usado para atualizar usuários criados antes da implementação do aceite de termos (migration 202602130001). POST /.netlify/functions/update-user-terms Body: { user_id, terms_accepted_at, terms_version, privacy_policy_accepted_at } Architecture: MVC Pattern API → Controller → Service → Repository @version 2.0.0 @date 2026-02-14 No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -3662,10 +3556,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "user_id",
-                  "terms_accepted_at"
-                ],
+                "required": ["user_id", "terms_accepted_at"],
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -3697,9 +3588,7 @@
     },
     "/user-auth": {
       "post": {
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "operationId": "userAuth",
         "summary": "Autenticar / criar / atualizar usuário (multi-action)",
         "description": "Endpoint multi-ação controlado pelo campo `action`. Utilizado por `SecureAPI.getOrCreateUser()`, `SecureAPI.updateUser()` e `SecureAPI.findOrCreateMarket()`.\n\n| `action` | Descrição |\n|---|---|\n| `getOrCreate` | Busca ou cria o usuário |\n| `update` | Atualiza dados do perfil |\n| `findOrCreateMarket` | Busca ou cria mercado vinculado ao usuário |",
@@ -3789,9 +3678,7 @@
     },
     "/validate-session": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "operationId": "validateSession",
         "summary": "Validar sessão (JWT Bearer ou Legacy UUID)",
         "description": "Valida uma sessão ativa via **estratégia dupla**:\n\n**Estratégia 1 — JWT Bearer (preferencial para mobile):**  \nEnvie `Authorization: Bearer <accessToken>` no header. O endpoint decodifica e verifica a assinatura HS256 sem consultar o banco.\n\n**Estratégia 2 — Legacy UUID (backward compat para web):**  \nEnvie `{ user_id }` no body. O endpoint consulta o Supabase e retorna o perfil.\n\nA resposta inclui o campo `authMethod` (`\"jwt\"` ou `\"legacy\"`) para o cliente saber qual caminho foi utilizado.\n\n### Erros JWT\n| Código | Descrição |\n|---|---|\n| `JWT_EXPIRED` | Access token expirado — chame `POST /api/refresh-token` |\n| `JWT_INVALID` | Token inválido, adulterado ou com assinatura incorreta |\n\n### Segurança\n- **CWE-208**: Comparação de assinatura HMAC com `timingSafeEqual` (sem timing side-channel)\n- **CWE-284**: JWT carrega `sub` (user ID) — sem lookup de banco para validação\n- **CWE-209**: Mensagens de erro sanitizadas em produção\n\n### Arquitetura\n`POST /api/validate-session` → `wrapHandler` → `buildHandler(authCtrl)` → `ctrl.validateAccessToken()` | `ctrl.validateUserSession()`\n\n@version 3.0.0",
@@ -3835,10 +3722,7 @@
               "application/json": {
                 "schema": {
                   "type": "object",
-                  "required": [
-                    "valid",
-                    "authMethod"
-                  ],
+                  "required": ["valid", "authMethod"],
                   "properties": {
                     "valid": {
                       "type": "boolean",
@@ -3846,10 +3730,7 @@
                     },
                     "authMethod": {
                       "type": "string",
-                      "enum": [
-                        "jwt",
-                        "legacy"
-                      ],
+                      "enum": ["jwt", "legacy"],
                       "description": "Estratégia utilizada para validar a sessão"
                     },
                     "user": {
@@ -3930,10 +3811,7 @@
                     },
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "JWT_EXPIRED",
-                        "JWT_INVALID"
-                      ],
+                      "enum": ["JWT_EXPIRED", "JWT_INVALID"],
                       "description": "`JWT_EXPIRED` = renove via `/refresh-token`; `JWT_INVALID` = token adulterado"
                     }
                   }
@@ -3969,9 +3847,7 @@
     },
     "/verify-beta-access": {
       "get": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "operationId": "verifyBetaAccess",
         "summary": "Verify Beta Access",
         "description": "Netlify Function - Beta Access Verification Endpoint: GET /api/verify-beta-access?phone=<value>&code=<value> Segurança: - Validação de método HTTP (apenas GET) - CORS configurado - Rate limiting (10 tentativas por 15 min por IP) - Validação de query params no controller - Erros sem exposição de stack trace Fluxo: API → Controller → Service → Repository → Database (RPC) @version 1.0.0 No `SecureAPI` wrapper found — endpoint may need wrapping.",
@@ -4015,9 +3891,7 @@
     },
     "/verify-otp": {
       "post": {
-        "tags": [
-          "Authentication"
-        ],
+        "tags": ["Authentication"],
         "operationId": "verifyOTP",
         "summary": "Verificar código OTP",
         "description": "Valida o código OTP e retorna o perfil do usuário autenticado **junto com tokens JWT** para autenticação nas chamadas subsequentes (mobile-first).\n\n**Rate Limit:** 5 tentativas por 15 minutos por e-mail.\n\nApós verificação bem-sucedida, armazene:\n- `accessToken` → `sessionStorage` (tab-scoped, 15 min)\n- `refreshToken` → `localStorage` (persistente, 7 dias)\n\nQuando o `accessToken` expirar, chame `POST /api/refresh-token` para renovar a sessão.\n\nUtilizado por `SecureAPI.verifyOTP()`.",
@@ -4029,10 +3903,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email",
-                  "token"
-                ],
+                "required": ["email", "token"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -4117,9 +3988,7 @@
     },
     "/family-finance-member": {
       "get": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "getFamilyFinanceMember",
         "summary": "Buscar perfil do membro",
         "description": "Retorna o perfil do membro vinculado ao usuário autenticado.",
@@ -4160,9 +4029,7 @@
         "x-last-synced": "2026-03-09"
       },
       "post": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "upsertFamilyFinanceMember",
         "summary": "Criar ou atualizar perfil do membro",
         "description": "Cria ou atualiza o perfil do membro (upsert por user_id).",
@@ -4172,11 +4039,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "user_id",
-                  "name",
-                  "phone"
-                ],
+                "required": ["user_id", "name", "phone"],
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -4222,9 +4085,7 @@
     },
     "/family-finance-transactions": {
       "get": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "getFamilyFinanceTransactions",
         "summary": "Listar transações financeiras",
         "description": "Retorna transações do membro com filtros opcionais.",
@@ -4252,10 +4113,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "whatsapp",
-                "app"
-              ]
+              "enum": ["whatsapp", "app"]
             }
           },
           {
@@ -4315,9 +4173,7 @@
         "x-last-synced": "2026-03-09"
       },
       "post": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "createFamilyFinanceTransaction",
         "summary": "Registrar nova transação",
         "description": "Cria uma nova transação financeira. Amount negativo = despesa, positivo = receita.",
@@ -4327,14 +4183,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "user_id",
-                  "name",
-                  "amount",
-                  "category",
-                  "member_id",
-                  "date"
-                ],
+                "required": ["user_id", "name", "amount", "category", "member_id", "date"],
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -4365,10 +4214,7 @@
                   },
                   "source": {
                     "type": "string",
-                    "enum": [
-                      "whatsapp",
-                      "app"
-                    ],
+                    "enum": ["whatsapp", "app"],
                     "default": "app"
                   }
                 }
@@ -4403,9 +4249,7 @@
     },
     "/family-finance-delete-last-transaction": {
       "delete": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "deleteLastFamilyFinanceTransaction",
         "summary": "Desfazer última transação WhatsApp",
         "description": "Remove a transação WhatsApp mais recente do membro (bot 'desfazer'). Usa fn_delete_last_whatsapp_transaction com validação de ownership.",
@@ -4464,9 +4308,7 @@
     },
     "/family-finance-goals": {
       "get": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "getFamilyFinanceGoals",
         "summary": "Listar metas financeiras",
         "description": "Retorna metas compartilhadas da família com progress_percent e remaining calculados.",
@@ -4506,9 +4348,7 @@
         "x-last-synced": "2026-03-09"
       },
       "post": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "createFamilyFinanceGoal",
         "summary": "Criar nova meta financeira",
         "requestBody": {
@@ -4517,12 +4357,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "user_id",
-                  "label",
-                  "target",
-                  "deadline"
-                ],
+                "required": ["user_id", "label", "target", "deadline"],
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -4579,9 +4414,7 @@
         "x-last-synced": "2026-03-09"
       },
       "put": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "updateFamilyFinanceGoal",
         "summary": "Atualizar meta existente",
         "description": "Atualiza campos permitidos (label, target, saved, deadline, color). Campos imutáveis: id, created_at, created_by_member_id.",
@@ -4602,9 +4435,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "user_id"
-                ],
+                "required": ["user_id"],
                 "properties": {
                   "user_id": {
                     "type": "string",
@@ -4657,9 +4488,7 @@
         "x-last-synced": "2026-03-09"
       },
       "delete": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "deleteFamilyFinanceGoal",
         "summary": "Remover meta",
         "parameters": [
@@ -4711,9 +4540,7 @@
     },
     "/family-finance-summary": {
       "get": {
-        "tags": [
-          "FamilyFinance"
-        ],
+        "tags": ["FamilyFinance"],
         "operationId": "getFamilyFinanceSummary",
         "summary": "Resumo financeiro mensal",
         "description": "Retorna totais de receita/despesas/saldo e breakdown por categoria. Usa view v_monthly_summary / fn_monthly_summary.",
@@ -4799,13 +4626,7 @@
       "AddressByCepResponse": {
         "type": "object",
         "description": "Endereço completo retornado pela API ViaCEP",
-        "required": [
-          "cep",
-          "logradouro",
-          "bairro",
-          "cidade",
-          "uf"
-        ],
+        "required": ["cep", "logradouro", "bairro", "cidade", "uf"],
         "properties": {
           "cep": {
             "type": "string",
@@ -4928,10 +4749,7 @@
       },
       "SearchNearbyMarketsRequest": {
         "type": "object",
-        "required": [
-          "latitude",
-          "longitude"
-        ],
+        "required": ["latitude", "longitude"],
         "properties": {
           "latitude": {
             "type": "number",
@@ -4954,11 +4772,7 @@
             "items": {
               "type": "string"
             },
-            "example": [
-              "supermarket",
-              "grocery_or_supermarket",
-              "store"
-            ]
+            "example": ["supermarket", "grocery_or_supermarket", "store"]
           },
           "user_id": {
             "type": "string",
@@ -5034,17 +4848,11 @@
       },
       "UserAuthRequest": {
         "type": "object",
-        "required": [
-          "action"
-        ],
+        "required": ["action"],
         "properties": {
           "action": {
             "type": "string",
-            "enum": [
-              "getOrCreate",
-              "update",
-              "findOrCreateMarket"
-            ],
+            "enum": ["getOrCreate", "update", "findOrCreateMarket"],
             "description": "Ação a executar"
           },
           "name": {
@@ -5143,10 +4951,7 @@
       "OTPVerifyResponse": {
         "type": "object",
         "description": "Resposta do verify-otp v2.0.0+. Inclui tokens JWT para autenticação móvel.",
-        "required": [
-          "success",
-          "user"
-        ],
+        "required": ["success", "user"],
         "properties": {
           "success": {
             "type": "boolean",
@@ -5188,12 +4993,7 @@
       "JWTSessionResponse": {
         "type": "object",
         "description": "Par de tokens JWT emitido ou renovado. Retornado por `POST /api/refresh-token`.",
-        "required": [
-          "accessToken",
-          "refreshToken",
-          "expiresIn",
-          "refreshExpiresIn"
-        ],
+        "required": ["accessToken", "refreshToken", "expiresIn", "refreshExpiresIn"],
         "properties": {
           "accessToken": {
             "type": "string",
@@ -5352,11 +5152,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "completed",
-              "archived"
-            ],
+            "enum": ["active", "completed", "archived"],
             "default": "active"
           },
           "share_code": {
@@ -5387,9 +5183,7 @@
       },
       "UpdateShoppingListRequest": {
         "type": "object",
-        "required": [
-          "user_id"
-        ],
+        "required": ["user_id"],
         "properties": {
           "user_id": {
             "type": "string",
@@ -5405,11 +5199,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "active",
-              "completed",
-              "archived"
-            ]
+            "enum": ["active", "completed", "archived"]
           }
         }
       },
@@ -5436,10 +5226,7 @@
       },
       "ShoppingListItemInput": {
         "type": "object",
-        "required": [
-          "product_name",
-          "quantity"
-        ],
+        "required": ["product_name", "quantity"],
         "properties": {
           "product_name": {
             "type": "string",
@@ -5507,10 +5294,7 @@
           },
           "type": {
             "type": "string",
-            "enum": [
-              "income",
-              "expense"
-            ]
+            "enum": ["income", "expense"]
           },
           "category": {
             "type": "string"
@@ -5525,10 +5309,7 @@
           },
           "source": {
             "type": "string",
-            "enum": [
-              "whatsapp",
-              "app"
-            ]
+            "enum": ["whatsapp", "app"]
           },
           "notes": {
             "type": "string"
@@ -5570,6 +5351,35 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "UserByPhoneResponse": {
+        "type": "object",
+        "description": "Projeção mínima de usuário retornada pelo endpoint do WhatsApp bot (CWE-200: apenas campos não-sensíveis).",
+        "required": ["id", "phone", "email", "name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID do usuário",
+            "example": "9eb946b7-7e29-4460-a9cf-81aebac2ea4c"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Telefone armazenado no formato dígitos-only (ex: 5541999999999)",
+            "example": "5541999999999"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "E-mail do usuário",
+            "example": "user@example.com"
+          },
+          "name": {
+            "type": "string",
+            "description": "Nome do usuário",
+            "example": "João Silva"
           }
         }
       }

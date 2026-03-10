@@ -583,11 +583,29 @@ GRANT EXECUTE ON FUNCTION fn_delete_last_whatsapp_transaction(UUID) TO authentic
 
 -- =============================================================
 -- 10. FUNÇÃO: fn_monthly_summary
---    Retorna resumo financeiro de um mês específico.
---    Parâmetro: p_month DATE (qualquer dia do mês desejado).
+--    Retorna resumo financeiro de um mês específico para um usuário específico.
+--    Parâmetros:
+--      p_user_id UUID  — OBRIGATÓRIO; isola dados por usuário explicitamente,
+--                        independente de RLS. Nunca NULL.
+--      p_month   DATE  — qualquer dia do mês desejado (default: mês atual).
+--
+--    ISOLAMENTO EXPLÍCITO (Defense-in-Depth):
+--      Filtra via JOIN transactions → members → user_id = p_user_id.
+--      Garante isolamento cross-tenant mesmo quando chamada com service_role
+--      key (que bypassa RLS), como ocorre nos bots WhatsApp do projeto.
+--      NÃO depende de RLS como único mecanismo de controle de acesso.
+--      Referência: OWASP A01:2021 – Broken Access Control (CWE-284)
 -- =============================================================
 
-CREATE OR REPLACE FUNCTION fn_monthly_summary(p_month DATE DEFAULT CURRENT_DATE)
+-- Remove a assinatura anterior (sem p_user_id) para evitar sobrecarga vulnerável:
+-- a versão antiga agregava transações de todos os usuários quando chamada via
+-- service_role key (que bypassa RLS), violando o isolamento cross-tenant.
+DROP FUNCTION IF EXISTS fn_monthly_summary(DATE);
+
+CREATE OR REPLACE FUNCTION fn_monthly_summary(
+  p_user_id UUID,
+  p_month   DATE DEFAULT CURRENT_DATE
+)
 RETURNS TABLE (
   total_income    NUMERIC,
   total_expenses  NUMERIC,
@@ -595,28 +613,71 @@ RETURNS TABLE (
   category        TEXT,
   category_total  NUMERIC
 )
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 AS $$
+BEGIN
+  -- SEGURANÇA: p_user_id é obrigatório e jamais pode ser NULL.
+  -- Sem este parâmetro, chamadas via service_role key (bots WhatsApp)
+  -- retornariam totais de TODOS os usuários — vazamento cross-tenant.
+  -- Referência: OWASP A01:2021 / CWE-284
+  IF p_user_id IS NULL THEN
+    RAISE EXCEPTION 'p_user_id é obrigatório para fn_monthly_summary'
+      USING HINT = 'Passe o UUID do usuário autenticado para garantir isolamento por tenant';
+  END IF;
+
+  RETURN QUERY
+  WITH base AS (
+    -- Restringe ao usuário via JOIN members.user_id = p_user_id.
+    -- Este filtro é o mecanismo primário de isolamento — não RLS.
+    SELECT
+      t.category,
+      t.amount
+    FROM transactions t
+    JOIN members m ON m.id = t.member_id
+    WHERE DATE_TRUNC('month', t.date) = DATE_TRUNC('month', p_month)
+      AND m.user_id = p_user_id
+  ),
+  -- totals: agrega sobre as linhas reais do usuário;
+  -- duas despesas de -10 → total_expenses = 20 (sem colapso por amount)
+  totals AS (
+    SELECT
+      SUM(CASE WHEN amount > 0 THEN amount      ELSE 0 END) AS total_income,
+      SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) AS total_expenses,
+      SUM(amount)                                            AS balance
+    FROM base
+  ),
+  -- by_category: uma linha por categoria, sem vazar amount no GROUP BY
+  by_category AS (
+    SELECT
+      category,
+      SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) AS category_total
+    FROM base
+    GROUP BY category
+  )
   SELECT
-    SUM(CASE WHEN amount > 0 THEN amount  ELSE 0 END) OVER () AS total_income,
-    SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) OVER () AS total_expenses,
-    SUM(amount) OVER () AS balance,
-    category,
-    SUM(CASE WHEN amount < 0 THEN ABS(amount) ELSE 0 END) AS category_total
-  FROM transactions
-  WHERE DATE_TRUNC('month', date) = DATE_TRUNC('month', p_month)
-  GROUP BY category, amount
-  ORDER BY category_total DESC;
+    t.total_income,
+    t.total_expenses,
+    t.balance,
+    c.category,
+    c.category_total
+  FROM by_category c
+  CROSS JOIN totals t
+  ORDER BY c.category_total DESC;
+END;
 $$;
 
-COMMENT ON FUNCTION fn_monthly_summary IS
-  'Resumo financeiro mensal com totais e breakdown por categoria. '
-  'ATENÇÃO: função STABLE sem SECURITY DEFINER → respeita RLS. '
-  'Retorna apenas transações do usuário cujo contexto estiver definido via app.current_user_id.';
+COMMENT ON FUNCTION fn_monthly_summary(UUID, DATE) IS
+  'Resumo financeiro mensal com totais globais e breakdown por categoria para um usuário. '
+  'ISOLAMENTO EXPLÍCITO: filtra via JOIN transactions→members.user_id=p_user_id, garantindo '
+  'isolamento cross-tenant mesmo com service_role key (que bypassa RLS). '
+  'p_user_id é obrigatório — RAISE EXCEPTION se NULL. '
+  'Usa CTEs para calcular totais sobre linhas reais (sem colapso por amount) '
+  'e exibir exatamente uma linha por categoria. '
+  'Referência: OWASP A01:2021 – Broken Access Control (CWE-284)';
 
 -- Apenas usuários autenticados podem chamar esta função
-GRANT EXECUTE ON FUNCTION fn_monthly_summary(DATE) TO authenticated;
+GRANT EXECUTE ON FUNCTION fn_monthly_summary(UUID, DATE) TO authenticated;
 
 
 -- =============================================================

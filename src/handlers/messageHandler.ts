@@ -42,7 +42,7 @@ export async function handleMessage(msg: Message): Promise<void> {
     console.log(`[Bot] Número não autorizado: ${phone}`);
     return;
   }
-
+  
   const text = msg.body.trim();
   if (!text) return;
 
