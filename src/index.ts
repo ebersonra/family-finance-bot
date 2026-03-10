@@ -43,6 +43,8 @@ const client = new Client({
     // bypassCSP: evita que políticas de segurança bloqueiem a injeção do script
     // (necessário com Node.js v24 + puppeteer-core — contextos são mais restritivos)
     bypassCSP: true,
+    // Tempo máximo para o Chromium iniciar (padrão 30s insuficiente em VMs 1GB)
+    timeout: 120000,
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -50,6 +52,11 @@ const client = new Client({
       '--disable-accelerated-2d-canvas',
       '--no-first-run',
       '--disable-gpu',
+      // Roda tudo num único processo — essencial em VMs com pouca RAM (≤ 1GB)
+      '--single-process',
+      // Reduz uso de memória
+      '--renderer-process-limit=1',
+      '--js-flags=--max-old-space-size=256',
       // Evita isolamento de contexto entre frames que pode destruir o
       // execution context durante a navegação inicial do WhatsApp Web
       '--disable-features=IsolateOrigins,site-per-process',
@@ -142,11 +149,20 @@ client.on('ready', () => {
 
 client.on('disconnected', (reason) => {
   console.warn('⚠️ Bot desconectado:', reason);
-  // Tenta reconectar automaticamente
+  stopQrServer();
+
+  if (reason === 'LOGOUT') {
+    // Sessão invalidada — não adianta reconectar sem novo QR code.
+    // PM2 vai reiniciar o processo e apresentar um novo QR.
+    console.error('❌ Sessão encerrada por LOGOUT. Reiniciando processo para novo QR...');
+    process.exit(1);
+  }
+
+  // Para outros motivos (ex: perda de rede), tenta reconectar
   setTimeout(() => {
     console.log('🔄 Tentando reconectar...');
     client.initialize();
-  }, 5000);
+  }, 10000);
 });
 
 client.on('message', async (msg) => {
