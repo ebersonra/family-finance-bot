@@ -62,11 +62,14 @@ jobs:
             cd ~/family-finance-bot
             git pull origin main
 
-            echo "🔧 Instalando dependências de produção..."
-            npm ci --omit=dev
+            echo "🔧 Instalando dependências (incluindo devDependencies para o build)..."
+            npm ci
 
             echo "🔨 Compilando TypeScript..."
             npm run build
+
+            echo "🧹 Removendo devDependencies após build..."
+            npm prune --omit=dev
 
             echo "🔄 Reiniciando o bot com PM2..."
             pm2 describe family-finance-bot > /dev/null 2>&1 \
