@@ -11,6 +11,8 @@ import type {
   FamilyMember,
   FamilyTransaction,
   FamilyGoal,
+  FamilyGroup,
+  FamilyGroupMember,
   ApiMonthlySummary,
 } from '../types';
 
@@ -141,6 +143,8 @@ export async function upsertMemberProfile(data: {
 
 export interface GetTransactionsParams {
   user_id: string;
+  /** Filtra por grupo familiar */
+  family_id?: string;
   category?: string;
   source?: 'whatsapp' | 'app';
   month?: string;     // YYYY-MM
@@ -296,17 +300,228 @@ export async function deleteGoal(
 // ═══════════════════════════════════════════════
 
 /**
- * GET /family-finance-summary?user_id=<uuid>&month=<YYYY-MM>
+ * GET /family-finance-summary?user_id=<uuid>&month=<YYYY-MM>&family_id=<uuid>
  * Retorna totais de receita/despesas/saldo e breakdown por categoria.
  *
- * @param userId  UUID do usuário autenticado
- * @param month   Mês no formato YYYY-MM (padrão: mês atual)
+ * @param userId   UUID do usuário autenticado
+ * @param month    Mês no formato YYYY-MM (padrão: mês atual)
+ * @param familyId UUID do grupo familiar (opcional)
  */
 export async function getMonthlySummary(
   userId: string,
   month?: string,
+  familyId?: string,
 ): Promise<ApiMonthlySummary> {
   return request<ApiMonthlySummary>(
-    `/family-finance-summary${toQS({ user_id: userId, month })}`,
+    `/family-finance-summary${toQS({ user_id: userId, month, family_id: familyId })}`,
+  );
+}
+
+// ═══════════════════════════════════════════════
+// 7. FAMILY GROUPS  ·  /family-finance-group
+// ─────────────────────────────────────────────
+// GET  ?user_id              → lista todos os grupos do usuário
+// GET  ?user_id&family_id    → detalha um grupo com membros
+// POST { user_id, name }     → cria novo grupo
+// POST { user_id, invite_code } → entrar via código de convite
+// PUT  ?family_id body { user_id, name } → renomear (owner only)
+// DELETE ?user_id&family_id  → deletar grupo (owner only)
+// DELETE ?user_id&family_id&action=leave → sair do grupo
+// ═══════════════════════════════════════════════
+
+/**
+ * GET /family-finance-group?user_id=<uuid>
+ * Lista todos os grupos familiares que o usuário pertence.
+ */
+export async function getGroups(userId: string): Promise<FamilyGroup[]> {
+  return request<FamilyGroup[]>(
+    `/family-finance-group${toQS({ user_id: userId })}`,
+  );
+}
+
+/**
+ * GET /family-finance-group?user_id=<uuid>&family_id=<uuid>
+ * Retorna um grupo específico com a lista completa de membros.
+ */
+export async function getGroup(
+  userId: string,
+  familyId: string,
+): Promise<FamilyGroup> {
+  return request<FamilyGroup>(
+    `/family-finance-group${toQS({ user_id: userId, family_id: familyId })}`,
+  );
+}
+
+/**
+ * POST /family-finance-group  body: { user_id, name }
+ * Cria um novo grupo familiar. O criador torna-se owner e primeiro membro.
+ */
+export async function createGroup(
+  userId: string,
+  name: string,
+): Promise<FamilyGroup> {
+  return request<FamilyGroup>('/family-finance-group', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, name }),
+  });
+}
+
+/**
+ * POST /family-finance-group  body: { user_id, invite_code }
+ * Entra em um grupo existente via código de convite.
+ */
+export async function joinGroup(
+  userId: string,
+  inviteCode: string,
+): Promise<FamilyGroup> {
+  return request<FamilyGroup>('/family-finance-group', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, invite_code: inviteCode }),
+  });
+}
+
+/**
+ * PUT /family-finance-group?family_id=<uuid>  body: { user_id, name }
+ * Renomeia o grupo (somente owner).
+ */
+export async function renameGroup(
+  familyId: string,
+  userId: string,
+  name: string,
+): Promise<FamilyGroup> {
+  return request<FamilyGroup>(
+    `/family-finance-group${toQS({ family_id: familyId })}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ user_id: userId, name }),
+    },
+  );
+}
+
+/**
+ * DELETE /family-finance-group?user_id=<uuid>&family_id=<uuid>
+ * Deleta o grupo (somente owner). Remove todos os membros via CASCADE.
+ */
+export async function deleteGroup(
+  userId: string,
+  familyId: string,
+): Promise<{ deleted: boolean }> {
+  return request<{ deleted: boolean }>(
+    `/family-finance-group${toQS({ user_id: userId, family_id: familyId })}`,
+    { method: 'DELETE' },
+  );
+}
+
+/**
+ * DELETE /family-finance-group?user_id=<uuid>&family_id=<uuid>&action=leave
+ * Sai de um grupo (qualquer membro; owner deve transferir ownership antes).
+ */
+export async function leaveGroup(
+  userId: string,
+  familyId: string,
+): Promise<{ left: boolean }> {
+  return request<{ left: boolean }>(
+    `/family-finance-group${toQS({ user_id: userId, family_id: familyId, action: 'leave' })}`,
+    { method: 'DELETE' },
+  );
+}
+
+// ═══════════════════════════════════════════════
+// 8. GROUP MEMBERS  ·  /family-finance-group-member
+// ─────────────────────────────────────────────
+// GET    ?user_id&family_id              → lista membros
+// POST   { user_id, family_id, phone }   → adiciona membro por WhatsApp (owner)
+// PUT    { user_id, family_id, member_id } → promove a owner (owner)
+// DELETE ?user_id&family_id&member_id     → remove membro (owner)
+// ═══════════════════════════════════════════════
+
+/**
+ * GET /family-finance-group-member?user_id=<uuid>&family_id=<uuid>
+ * Lista todos os membros de um grupo (requer que o chamador seja membro).
+ */
+export async function getGroupMembers(
+  userId: string,
+  familyId: string,
+): Promise<FamilyGroupMember[]> {
+  return request<FamilyGroupMember[]>(
+    `/family-finance-group-member${toQS({ user_id: userId, family_id: familyId })}`,
+  );
+}
+
+/**
+ * POST /family-finance-group-member  body: { user_id, family_id, phone }
+ * Adiciona um membro ao grupo pelo número de WhatsApp (somente owner).
+ */
+export async function addGroupMember(
+  userId: string,
+  familyId: string,
+  phone: string,
+): Promise<FamilyGroupMember> {
+  return request<FamilyGroupMember>('/family-finance-group-member', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, family_id: familyId, phone }),
+  });
+}
+
+/**
+ * PUT /family-finance-group-member  body: { user_id, family_id, member_id }
+ * Promove um membro a owner (somente owner atual).
+ */
+export async function promoteGroupMember(
+  userId: string,
+  familyId: string,
+  memberId: string,
+): Promise<FamilyGroupMember> {
+  return request<FamilyGroupMember>('/family-finance-group-member', {
+    method: 'PUT',
+    body: JSON.stringify({ user_id: userId, family_id: familyId, member_id: memberId }),
+  });
+}
+
+/**
+ * DELETE /family-finance-group-member?user_id=<uuid>&family_id=<uuid>&member_id=<uuid>
+ * Remove um membro do grupo (somente owner).
+ */
+export async function removeGroupMember(
+  userId: string,
+  familyId: string,
+  memberId: string,
+): Promise<{ removed: boolean }> {
+  return request<{ removed: boolean }>(
+    `/family-finance-group-member${toQS({ user_id: userId, family_id: familyId, member_id: memberId })}`,
+    { method: 'DELETE' },
+  );
+}
+
+// ═══════════════════════════════════════════════
+// 9. MEMBER TRANSACTIONS  ·  /family-finance-member-transactions
+// ─────────────────────────────────────────────
+// GET ?user_id&member_id[&family_id][&category][&source][&month][&limit][&offset]
+// Retorna transações de um membro específico, com filtragem opcional por família.
+// ═══════════════════════════════════════════════
+
+export interface GetMemberTransactionsParams {
+  user_id: string;
+  member_id: string;
+  /** Escopo de família — restringe às transações dentro do grupo */
+  family_id?: string;
+  category?: string;
+  source?: 'whatsapp' | 'app';
+  month?: string;    // YYYY-MM
+  limit?: number;
+  offset?: number;
+}
+
+/**
+ * GET /family-finance-member-transactions
+ * Retorna transações de um membro específico com filtros opcionais.
+ * Quando `family_id` é informado, verifica que ambos (caller + member)
+ * pertencem ao grupo antes de retornar os dados (CWE-284).
+ */
+export async function getMemberTransactions(
+  params: GetMemberTransactionsParams,
+): Promise<FamilyTransaction[]> {
+  return request<FamilyTransaction[]>(
+    `/family-finance-member-transactions${toQS(params)}`,
   );
 }

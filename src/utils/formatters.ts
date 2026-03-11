@@ -2,7 +2,7 @@
 // FamilyFinanceBot · Formatters
 // ─────────────────────────────────────────────
 
-import type { ParsedTransaction, FamilyGoal, ApiMonthlySummary } from '../types';
+import type { ParsedTransaction, FamilyGoal, FamilyGroup, FamilyGroupMember, ApiMonthlySummary } from '../types';
 
 const CATEGORY_LABELS: Record<string, string> = {
   food: '🛒 Alimentação',
@@ -117,6 +117,74 @@ export function formatGoals(goals: FamilyGoal[]): string {
   return [`🎯 *Metas da família*`, ``, ...lines].join('\n\n');
 }
 
+// ── Grupos Familiares ─────────────────────────────
+
+/** Lista todos os grupos familiares (resposta de /grupo sem family_id). */
+export function formatGroups(groups: FamilyGroup[]): string {
+  if (groups.length === 0) {
+    return [
+      '👨‍👩‍👧‍👦 Você ainda não pertence a nenhum grupo.',
+      '',
+      'Para criar um grupo, acesse o app FamilyFinance.',
+    ].join('\n');
+  }
+
+  const lines = groups.map((g) => {
+    const role = g.role === 'owner' ? '👑 dono' : '👤 membro';
+    return `• *${g.name}* — ${role}`;
+  });
+
+  return [
+    `👨‍👩‍👧‍👦 *Seus grupos (${groups.length}):*`,
+    '',
+    ...lines,
+    '',
+    '_Para ver os membros de um grupo, use /membros_',
+  ].join('\n');
+}
+
+/** Detalha um grupo com lista de membros. */
+export function formatGroup(group: FamilyGroup): string {
+  const role = group.role === 'owner' ? ' 👑' : '';
+  const header = [`👨‍👩‍👧‍👦 *${group.name}*${role}`];
+
+  if (group.invite_code) {
+    header.push(`🔑 Código de convite: \`${group.invite_code}\``);
+  }
+
+  const memberLines: string[] = [];
+  if (group.members && group.members.length > 0) {
+    memberLines.push('', '*Membros:*');
+    group.members.forEach((m) => {
+      const roleIcon = m.role === 'owner' ? '👑' : '👤';
+      memberLines.push(`  ${roleIcon} ${m.name}`);
+    });
+  }
+
+  return [...header, ...memberLines].join('\n');
+}
+
+/** Lista membros de um grupo (resposta de /membros). */
+export function formatGroupMembers(
+  members: FamilyGroupMember[],
+  groupName?: string,
+): string {
+  if (members.length === 0) {
+    return '👤 Nenhum membro encontrado no grupo.';
+  }
+
+  const title = groupName
+    ? `👥 *Membros de ${groupName} (${members.length}):*`
+    : `👥 *Membros do grupo (${members.length}):*`;
+
+  const lines = members.map((m) => {
+    const roleIcon = m.role === 'owner' ? '👑' : '👤';
+    return `  ${roleIcon} *${m.name}*`;
+  });
+
+  return [title, '', ...lines].join('\n');
+}
+
 // ── Ajuda ─────────────────────────────────────────
 
 export const HELP_MESSAGE = [
@@ -128,10 +196,12 @@ export const HELP_MESSAGE = [
   `  _"comprei 189 no mercado"_`,
   ``,
   `*Comandos disponíveis:*`,
-  `  /resumo — saldo e gastos do mês`,
-  `  /metas  — progresso das metas`,
-  `  /editar — apagar último lançamento`,
-  `  /ajuda  — esta mensagem`,
+  `  /resumo   — saldo e gastos do mês`,
+  `  /metas    — progresso das metas`,
+  `  /grupo    — seus grupos familiares`,
+  `  /membros  — membros do grupo ativo`,
+  `  /editar   — apagar último lançamento`,
+  `  /ajuda    — esta mensagem`,
 ].join('\n');
 
 // ── Helpers ───────────────────────────────────────

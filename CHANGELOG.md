@@ -9,6 +9,60 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/).
 
 ---
 
+## [1.4.0] — 2026-03-11
+
+### Adicionado
+
+#### Integração com novos endpoints `/family-finance-*`
+
+**`src/types.ts`**
+- `FamilyGroup` — representa um grupo familiar (`id`, `name`, `invite_code`, `role`, `members`).
+- `FamilyGroupMember` — representa um membro dentro de um grupo (`id`, `name`, `role`, `joined_at`).
+- `CommandType` expandido: `'group'` (`/grupo`) e `'members'` (`/membros`).
+- `BotContext.activeGroup?: FamilyGroup` — grupo familiar ativo na sessão.
+
+**`src/services/api.ts`**
+- `getGroups(userId)` — `GET /family-finance-group`
+- `getGroup(userId, familyId)` — `GET /family-finance-group?family_id=`
+- `createGroup(userId, name)` — `POST /family-finance-group`
+- `joinGroup(userId, inviteCode)` — `POST /family-finance-group` (via invite_code)
+- `renameGroup(familyId, userId, name)` — `PUT /family-finance-group`
+- `deleteGroup(userId, familyId)` — `DELETE /family-finance-group`
+- `leaveGroup(userId, familyId)` — `DELETE /family-finance-group?action=leave`
+- `getGroupMembers(userId, familyId)` — `GET /family-finance-group-member`
+- `addGroupMember(userId, familyId, phone)` — `POST /family-finance-group-member`
+- `promoteGroupMember(userId, familyId, memberId)` — `PUT /family-finance-group-member`
+- `removeGroupMember(userId, familyId, memberId)` — `DELETE /family-finance-group-member`
+- `getMemberTransactions(params)` — `GET /family-finance-member-transactions`
+- `GetMemberTransactionsParams` — interface com `user_id`, `member_id`, `family_id?`, filtros
+- `GetTransactionsParams.family_id?` — escopo de família adicionado
+- `getMonthlySummary` — parâmetro `familyId?` adicionado (`/family-finance-summary`)
+
+**`src/services/supabase.ts`**
+- `getFamilyGroups`, `getFamilyGroup`, `createFamilyGroup`, `joinFamilyGroup`,
+  `renameFamilyGroup`, `deleteFamilyGroup`, `leaveFamilyGroup` — wrappers de grupos
+- `listGroupMembers`, `addMemberToGroup`, `removeMemberFromGroup` — wrappers de membros do grupo
+- `getMemberTransactionHistory` — wrapper para `/family-finance-member-transactions`
+- `getMonthlySummary` — aceita `familyId?` para filtrar resumo por grupo
+- Re-exports: `FamilyGroup`, `FamilyGroupMember`, `GetMemberTransactionsParams`
+
+**`src/utils/classifier.ts`**
+- `/grupo` / `/group` → `'group'`
+- `/membros` / `/members` → `'members'`
+
+**`src/utils/formatters.ts`**
+- `formatGroups(groups)` — lista grupos do usuário
+- `formatGroup(group)` — detalha grupo com seus membros
+- `formatGroupMembers(members, groupName?)` — lista membros de um grupo
+- `HELP_MESSAGE` atualizado com `/grupo` e `/membros`
+
+**`src/handlers/messageHandler.ts`**
+- `handleGroup` — exibe grupos e define `ctx.activeGroup`
+- `handleMembers` — lista membros do grupo ativo (auto-carrega se necessário)
+- `handleSummary` — passa `ctx.activeGroup?.id` para filtrar por família
+
+---
+
 ## [1.3.0] — 2026-03-09
 
 ### Adicionado — `database/init.sql` (revisão DBA)

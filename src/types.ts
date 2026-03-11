@@ -33,6 +33,8 @@ export interface Member {
 export interface BotContext {
   phone: string;
   member: Member;
+  /** Grupo familiar ativo — preenchido após /grupo */
+  activeGroup?: FamilyGroup;
   lastTransaction?: ParsedTransaction;
   awaitingConfirmation?: ParsedTransaction;
 }
@@ -44,6 +46,8 @@ export type CommandType =
   | 'edit'          // "/editar"
   | 'summary'       // "/resumo"
   | 'goals'         // "/metas"
+  | 'group'         // "/grupo" — gerenciar grupos familiares
+  | 'members'       // "/membros" — listar membros do grupo
   | 'help'          // "/ajuda"
   | 'unknown';
 
@@ -106,4 +110,28 @@ export interface AuthUser {
   name: string;
   phone: string;
   email?: string;
+}
+
+// ── Grupos Familiares ─────────────────────────────
+
+/** Grupo familiar retornado por /family-finance-group */
+export interface FamilyGroup {
+  id: string;
+  name: string;
+  invite_code?: string;
+  owner_member_id?: string;
+  created_at?: string;
+  /** Papel do usuário autenticado no grupo (owner | member) */
+  role?: 'owner' | 'member';
+  /** Lista de membros — presente apenas em GET com family_id */
+  members?: FamilyGroupMember[];
+}
+
+/** Membro de um grupo familiar retornado por /family-finance-group-member */
+export interface FamilyGroupMember {
+  id: string;          // member_id
+  name: string;
+  phone?: string;
+  role: 'owner' | 'member';
+  joined_at?: string;
 }

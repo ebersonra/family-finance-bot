@@ -12,6 +12,8 @@ import {
   deleteLastTransaction,
   getMonthlySummary,
   getGoalsSummary,
+  getFamilyGroups,
+  listGroupMembers,
 } from '../services/supabase';
 import {
   formatConfirmation,
@@ -19,6 +21,8 @@ import {
   formatAmbiguity,
   formatSummary,
   formatGoals,
+  formatGroups,
+  formatGroupMembers,
   HELP_MESSAGE,
 } from '../utils/formatters';
 
@@ -76,6 +80,14 @@ export async function handleMessage(msg: Message): Promise<void> {
 
     case 'goals':
       await handleGoals(msg, ctx);
+      break;
+
+    case 'group':
+      await handleGroup(msg, ctx);
+      break;
+
+    case 'members':
+      await handleMembers(msg, ctx);
       break;
 
     case 'edit':
@@ -184,11 +196,45 @@ async function handleEdit(msg: Message, ctx: BotContext): Promise<void> {
 }
 
 async function handleSummary(msg: Message, ctx: BotContext): Promise<void> {
-  const summary = await getMonthlySummary(ctx.member.userId);
+  const summary = await getMonthlySummary(
+    ctx.member.userId,
+    undefined,
+    ctx.activeGroup?.id,
+  );
   await msg.reply(formatSummary(summary));
 }
 
 async function handleGoals(msg: Message, ctx: BotContext): Promise<void> {
   const goals = await getGoalsSummary(ctx.member.userId);
   await msg.reply(formatGoals(goals));
+}
+
+async function handleGroup(msg: Message, ctx: BotContext): Promise<void> {
+  const groups = await getFamilyGroups(ctx.member.userId);
+
+  // Atualiza grupo ativo na sessão: usa o primeiro (ou mantém o atual)
+  if (groups.length > 0 && !ctx.activeGroup) {
+    ctx.activeGroup = groups[0];
+    sessions.set(ctx.phone, ctx);
+  }
+
+  await msg.reply(formatGroups(groups));
+}
+
+async function handleMembers(msg: Message, ctx: BotContext): Promise<void> {
+  if (!ctx.activeGroup) {
+    // Tenta carregar o primeiro grupo automaticamente
+    const groups = await getFamilyGroups(ctx.member.userId);
+    if (groups.length === 0) {
+      await msg.reply(
+        '👨‍👩‍👧‍👦 Você não pertence a nenhum grupo.\nUse /grupo para verificar ou acesse o app.',
+      );
+      return;
+    }
+    ctx.activeGroup = groups[0];
+    sessions.set(ctx.phone, ctx);
+  }
+
+  const members = await listGroupMembers(ctx.member.userId, ctx.activeGroup.id);
+  await msg.reply(formatGroupMembers(members, ctx.activeGroup.name));
 }
