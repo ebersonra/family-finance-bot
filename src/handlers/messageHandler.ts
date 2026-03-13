@@ -58,7 +58,11 @@ export async function handleMessage(msg: Message): Promise<void> {
     const member = await getMemberByPhone(phone);
     if (!member) {
       await msg.reply(
-        '⚠️ Seu número não está cadastrado no app.\nAbra o FamilyFinance e adicione seu telefone no perfil.',
+        '⚠️ Não consegui identificar seu perfil completo.\n\n' +
+        'Verifique se:\n' +
+        '• Seu número está cadastrado no app FamilyFinance\n' +
+        '• Você pertence a um grupo familiar\n\n' +
+        'Acesse o app e configure seu perfil antes de continuar.',
       );
       return;
     }
@@ -160,7 +164,12 @@ async function handleConfirm(msg: Message, ctx: BotContext): Promise<void> {
   }
 
   const tx = ctx.awaitingConfirmation;
-  const result = await saveTransaction(tx, ctx.member.id, ctx.member.userId);
+  const result = await saveTransaction(
+    tx,
+    ctx.member.id,
+    ctx.member.userId,
+    ctx.member.familyId,
+  );
 
   if (!result) {
     await msg.reply('❌ Erro ao salvar. Tente novamente ou abra o app.');
@@ -185,7 +194,11 @@ async function handleCancel(msg: Message, ctx: BotContext): Promise<void> {
 }
 
 async function handleEdit(msg: Message, ctx: BotContext): Promise<void> {
-  const deleted = await deleteLastTransaction(ctx.member.id, ctx.member.userId);
+  const deleted = await deleteLastTransaction(
+    ctx.member.id,
+    ctx.member.userId,
+    ctx.member.familyId,
+  );
   if (deleted) {
     ctx.lastTransaction = undefined;
     sessions.set(ctx.phone, ctx);
@@ -199,42 +212,22 @@ async function handleSummary(msg: Message, ctx: BotContext): Promise<void> {
   const summary = await getMonthlySummary(
     ctx.member.userId,
     undefined,
-    ctx.activeGroup?.id,
+    ctx.member.familyId,
   );
   await msg.reply(formatSummary(summary));
 }
 
 async function handleGoals(msg: Message, ctx: BotContext): Promise<void> {
-  const goals = await getGoalsSummary(ctx.member.userId);
+  const goals = await getGoalsSummary(ctx.member.userId, ctx.member.familyId);
   await msg.reply(formatGoals(goals));
 }
 
 async function handleGroup(msg: Message, ctx: BotContext): Promise<void> {
   const groups = await getFamilyGroups(ctx.member.userId);
-
-  // Atualiza grupo ativo na sessão: usa o primeiro (ou mantém o atual)
-  if (groups.length > 0 && !ctx.activeGroup) {
-    ctx.activeGroup = groups[0];
-    sessions.set(ctx.phone, ctx);
-  }
-
   await msg.reply(formatGroups(groups));
 }
 
 async function handleMembers(msg: Message, ctx: BotContext): Promise<void> {
-  if (!ctx.activeGroup) {
-    // Tenta carregar o primeiro grupo automaticamente
-    const groups = await getFamilyGroups(ctx.member.userId);
-    if (groups.length === 0) {
-      await msg.reply(
-        '👨‍👩‍👧‍👦 Você não pertence a nenhum grupo.\nUse /grupo para verificar ou acesse o app.',
-      );
-      return;
-    }
-    ctx.activeGroup = groups[0];
-    sessions.set(ctx.phone, ctx);
-  }
-
-  const members = await listGroupMembers(ctx.member.userId, ctx.activeGroup.id);
-  await msg.reply(formatGroupMembers(members, ctx.activeGroup.name));
+  const members = await listGroupMembers(ctx.member.userId, ctx.member.familyId);
+  await msg.reply(formatGroupMembers(members));
 }

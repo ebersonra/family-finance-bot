@@ -90,7 +90,7 @@ export function formatSummary(summary: ApiMonthlySummary): string {
     ``,
     `📥 Entradas: *${fmt(total_income)}*`,
     `📤 Saídas:   *${fmt(total_expenses)}*`,
-    `💰 Saldo:    *${balance >= 0 ? '+' : ''}${fmt(balance)}*`,
+    `💰 Saldo:    *${balance >= 0 ? '+' : '-'}${fmt(balance)}*`,
     ``,
     topCategories.length > 0 ? `🏆 *Top categorias:*` : '',
     ...topLines,
@@ -157,7 +157,8 @@ export function formatGroup(group: FamilyGroup): string {
     memberLines.push('', '*Membros:*');
     group.members.forEach((m) => {
       const roleIcon = m.role === 'owner' ? '👑' : '👤';
-      memberLines.push(`  ${roleIcon} ${m.name}`);
+      const displayName = m.name || `#${m.id.slice(0, 8)}`;
+      memberLines.push(`  ${roleIcon} ${displayName}`);
     });
   }
 
@@ -179,7 +180,8 @@ export function formatGroupMembers(
 
   const lines = members.map((m) => {
     const roleIcon = m.role === 'owner' ? '👑' : '👤';
-    return `  ${roleIcon} *${m.name}*`;
+    const displayName = m.name || `#${m.id.slice(0, 8)}`;
+    return `  ${roleIcon} *${displayName}*`;
   });
 
   return [title, '', ...lines].join('\n');

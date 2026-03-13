@@ -167,6 +167,8 @@ export async function getTransactions(
 export interface CreateTransactionPayload {
   user_id: string;
   member_id: string;
+  /** UUID do grupo familiar — obrigatório pelo novo fluxo */
+  family_id: string;
   name: string;
   amount: number;       // negativo = despesa, positivo = receita
   category: string;
@@ -206,10 +208,11 @@ export interface DeleteLastTransactionResult {
 export async function deleteLastWhatsAppTransaction(
   userId: string,
   memberId: string,
+  familyId: string,
 ): Promise<DeleteLastTransactionResult> {
   try {
     return await request<DeleteLastTransactionResult>(
-      `/family-finance-delete-last-transaction${toQS({ user_id: userId, member_id: memberId })}`,
+      `/family-finance-delete-last-transaction${toQS({ user_id: userId, member_id: memberId, family_id: familyId })}`,
       { method: 'DELETE' },
     );
   } catch (err) {
@@ -225,17 +228,19 @@ export async function deleteLastWhatsAppTransaction(
 // ═══════════════════════════════════════════════
 
 /**
- * GET /family-finance-goals?user_id=<uuid>
+ * GET /family-finance-goals?user_id=<uuid>&family_id=<uuid>
  * Lista metas compartilhadas da família com progress_percent e remaining.
  */
-export async function getGoals(userId: string): Promise<FamilyGoal[]> {
+export async function getGoals(userId: string, familyId: string): Promise<FamilyGoal[]> {
   return request<FamilyGoal[]>(
-    `/family-finance-goals${toQS({ user_id: userId })}`,
+    `/family-finance-goals${toQS({ user_id: userId, family_id: familyId })}`,
   );
 }
 
 export interface CreateGoalPayload {
   user_id: string;
+  /** UUID do grupo familiar — obrigatório pelo novo fluxo */
+  family_id: string;
   label: string;
   target: number;
   deadline: string;   // ex: "2026-12"
@@ -256,6 +261,8 @@ export async function createGoal(payload: CreateGoalPayload): Promise<FamilyGoal
 
 export interface UpdateGoalPayload {
   user_id: string;
+  /** UUID do grupo familiar — obrigatório pelo novo fluxo */
+  family_id: string;
   label?: string;
   target?: number;
   saved?: number;
@@ -282,15 +289,16 @@ export async function updateGoal(
 }
 
 /**
- * DELETE /family-finance-goals?user_id=<uuid>&goal_id=<uuid>
+ * DELETE /family-finance-goals?user_id=<uuid>&goal_id=<uuid>&family_id=<uuid>
  * Remove uma meta da família.
  */
 export async function deleteGoal(
   userId: string,
   goalId: string,
+  familyId: string,
 ): Promise<{ deleted: boolean }> {
   return request<{ deleted: boolean }>(
-    `/family-finance-goals${toQS({ user_id: userId, goal_id: goalId })}`,
+    `/family-finance-goals${toQS({ user_id: userId, goal_id: goalId, family_id: familyId })}`,
     { method: 'DELETE' },
   );
 }
@@ -342,14 +350,19 @@ export async function getGroups(userId: string): Promise<FamilyGroup[]> {
 /**
  * GET /family-finance-group?user_id=<uuid>&family_id=<uuid>
  * Retorna um grupo específico com a lista completa de membros.
+ * Normaliza o array `members` caso venha com relação PostgREST aninhada.
  */
 export async function getGroup(
   userId: string,
   familyId: string,
 ): Promise<FamilyGroup> {
-  return request<FamilyGroup>(
+  const group = await request<FamilyGroup & { members?: RawGroupMember[] }>(
     `/family-finance-group${toQS({ user_id: userId, family_id: familyId })}`,
   );
+  if (Array.isArray(group.members)) {
+    return { ...group, members: group.members.map(normalizeGroupMember) };
+  }
+  return group;
 }
 
 /**
@@ -436,16 +449,57 @@ export async function leaveGroup(
 // ═══════════════════════════════════════════════
 
 /**
+ * Shape bruta retornada pelo endpoint Supabase/PostgREST.
+ * O join pode ser flat (campos no nível raiz) ou aninhado
+ * (relação `members` embutida como objeto).
+ *
+ * Exemplos observados:
+ *  - Flat:    { id, member_id, role, joined_at, name, phone }
+ *  - Nested:  { id, role, joined_at, members: { id, name, phone } }
+ */
+interface RawGroupMember {
+  id: string;
+  member_id?: string;
+  role: 'owner' | 'member';
+  joined_at?: string;
+  // campos presentes na resposta flat
+  name?: string;
+  phone?: string;
+  // relação embutida pelo PostgREST (Supabase join)
+  members?: {
+    id?: string;
+    name?: string;
+    phone?: string;
+  } | null;
+}
+
+/**
+ * Normaliza um item bruto da API para FamilyGroupMember,
+ * suportando tanto respostas flat quanto relações aninhadas.
+ */
+function normalizeGroupMember(raw: RawGroupMember): FamilyGroupMember {
+  return {
+    id:        raw.member_id ?? raw.members?.id ?? raw.id,
+    name:      raw.name ?? raw.members?.name ?? '',
+    phone:     raw.phone ?? raw.members?.phone,
+    role:      raw.role,
+    joined_at: raw.joined_at,
+  };
+}
+
+/**
  * GET /family-finance-group-member?user_id=<uuid>&family_id=<uuid>
  * Lista todos os membros de um grupo (requer que o chamador seja membro).
+ * Normaliza automaticamente respostas flat e aninhadas (PostgREST).
  */
 export async function getGroupMembers(
   userId: string,
   familyId: string,
 ): Promise<FamilyGroupMember[]> {
-  return request<FamilyGroupMember[]>(
+  const raw = await request<RawGroupMember[]>(
     `/family-finance-group-member${toQS({ user_id: userId, family_id: familyId })}`,
   );
+  return raw.map(normalizeGroupMember);
 }
 
 /**

@@ -28,13 +28,17 @@ export interface Member {
   userId: string;    // UUID do usuário autenticado (user-auth)
   name: string;
   phone: string;     // Ex: "5511999998888"
+  /**
+   * UUID do grupo familiar principal — resolvido no passo 3 do boot:
+   * findUserByPhone → getMemberProfile → getGroups → family_id
+   * Obrigatório para todas as chamadas /family-finance-*.
+   */
+  familyId: string;
 }
 
 export interface BotContext {
   phone: string;
   member: Member;
-  /** Grupo familiar ativo — preenchido após /grupo */
-  activeGroup?: FamilyGroup;
   lastTransaction?: ParsedTransaction;
   awaitingConfirmation?: ParsedTransaction;
 }

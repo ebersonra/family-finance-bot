@@ -145,7 +145,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/create-category": {
@@ -189,7 +189,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/create-market": {
@@ -249,7 +249,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/create-payment-method": {
@@ -272,7 +272,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "requestBody": {
           "required": true,
           "content": {
@@ -351,7 +351,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/create-shopping-list": {
@@ -377,7 +377,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "requestBody": {
           "required": true,
           "content": {
@@ -496,7 +496,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/delete-product": {
@@ -519,7 +519,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "requestBody": {
           "required": true,
           "content": {
@@ -570,7 +570,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "requestBody": {
           "required": true,
           "content": {
@@ -599,6 +599,29 @@
             }
           }
         }
+      }
+    },
+    "/family-finance-budget": {
+      "get": {
+        "tags": [
+          "Other"
+        ],
+        "operationId": "familyFinanceBudget",
+        "summary": "Family Finance Budget",
+        "description": "Family Finance Budget – Netlify Function CRUD de orçamentos mensais por categoria dentro de uma família. Hierarquia: User → Member → Family → Budget → Transaction Cada família define um teto de gasto (limit_amount) por categoria. O montante gasto real é calculado consultando transactions com o mesmo family_id + category — não é armazenado nesta tabela (sem estado derivado). ────────────────────────────────────────────────────────────────────── GET /.netlify/functions/family-finance-budget ────────────────────────────────────────────────────────────────────── Required: user_id=<uuid>  family_id=<uuid> Optional: budget_id=<uuid>  ← retorna apenas o orçamento da categoria → Returns array de budgets ordenado por category ASC. → Com budget_id retorna o orçamento específico ou 404. ────────────────────────────────────────────────────────────────────── POST /.netlify/functions/family-finance-budget ────────────────────────────────────────────────────────────────────── body: { user_id:               <uuid>    — required family_id:             <uuid>    — required category:              <string>  — required; um de VALID_CATEGORIES limit_amount:          <number>  — required; > 0 created_by_member_id?: <uuid>    — optional; membro que definiu o orçamento } → 201 com o orçamento criado. → 422 se (family_id, category) já existir. ────────────────────────────────────────────────────────────────────── PUT /.netlify/functions/family-finance-budget?budget_id=<uuid> ────────────────────────────────────────────────────────────────────── Required query: budget_id=<uuid> body: { user_id:               <uuid>    — required family_id:             <uuid>    — required limit_amount?:         <number>  — novo limite (> 0) created_by_member_id?: <uuid>    — membro que alterou } Campos imutáveis (ignorados): id, family_id, category, created_at ────────────────────────────────────────────────────────────────────── DELETE /.netlify/functions/family-finance-budget ────────────────────────────────────────────────────────────────────── Required: user_id=<uuid>  family_id=<uuid>  budget_id=<uuid> ────────────────────────────────────────────────────────────────────── CATEGORIAS VÁLIDAS ────────────────────────────────────────────────────────────────────── food, home, transport, health, leisure, education, income, other ────────────────────────────────────────────────────────────────────── SECURITY IMPLEMENTATION ────────────────────────────────────────────────────────────────────── - wrapHandler: CORS allowlist, rate-limiting, JWT validation (CWE-346, CWE-287) - UUID validation on every input (CWE-89) - exec_with_user_context RPC: sets app.current_user_id for RLS context (CWE-284) - Explicit family_id filter on every DB query (service_role bypasses RLS) - Imutable fields stripped before update (CWE-915) - Error sanitisation (CWE-209) MITIGATED VULNERABILITIES: - CWE-89:  SQL Injection      (UUID + input validation) - CWE-284: Broken Access      (exec_with_user_context + family_id filter) - CWE-346: Origin Validation  (wrapHandler CORS) - CWE-400: Resource Exhaustion (rate limiting) - CWE-209: Information Exposure (error sanitisation) - CWE-915: Mass Assignment    (immutable field stripping) @author Sentinel Coder @version 1.0.0 — família → orçamento por categoria @migration database/202603110002/add-budgets-table.sql No `SecureAPI` wrapper found — endpoint may need wrapping.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        },
+        "x-source": "auto-synced",
+        "x-last-synced": "2026-03-12"
       }
     },
     "/family-finance-delete-last-transaction": {
@@ -659,7 +682,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/family-finance-goals": {
@@ -703,7 +726,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       },
       "post": {
         "tags": [
@@ -958,7 +981,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/family-finance-group-member": {
@@ -1010,7 +1033,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/family-finance-member": {
@@ -1055,7 +1078,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       },
       "post": {
         "tags": [
@@ -1167,7 +1190,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/family-finance-summary": {
@@ -1260,7 +1283,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/family-finance-transactions": {
@@ -1382,7 +1405,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/find-market": {
@@ -1426,7 +1449,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-address-by-cep": {
@@ -1553,7 +1576,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-all-markets": {
@@ -1598,7 +1621,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-categories-by-user": {
@@ -1632,7 +1655,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-category-keywords": {
@@ -1666,7 +1689,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-company-by-cnpj": {
@@ -1700,7 +1723,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-dashboard-metrics": {
@@ -1737,7 +1760,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-feature-flags": {
@@ -1848,7 +1871,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-financial-by-categories": {
@@ -1871,7 +1894,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "parameters": [
           {
             "name": "user_id",
@@ -1957,7 +1980,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "parameters": [
           {
             "name": "user_id",
@@ -2303,7 +2326,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-financial-summary": {
@@ -2326,7 +2349,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "parameters": [
           {
             "name": "user_id",
@@ -2388,7 +2411,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-payment-methods": {
@@ -2422,7 +2445,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-product-by-description-or-gtin": {
@@ -2477,7 +2500,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-product-by-gtin": {
@@ -2543,7 +2566,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-product-categories": {
@@ -2577,7 +2600,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-products": {
@@ -2653,7 +2676,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-products-by-market": {
@@ -2880,7 +2903,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-shopping-list": {
@@ -2945,7 +2968,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-shopping-list-by-code": {
@@ -2997,7 +3020,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-shopping-lists": {
@@ -3034,7 +3057,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-shopping-lists-by-market": {
@@ -3209,7 +3232,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-user-by-phone": {
@@ -3278,7 +3301,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-user-presence": {
@@ -3321,7 +3344,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-user-profile": {
@@ -3355,7 +3378,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-user-settings": {
@@ -3389,7 +3412,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/get-user-statistics": {
@@ -3423,7 +3446,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/mark-beta-used": {
@@ -3449,7 +3472,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "requestBody": {
           "required": true,
           "content": {
@@ -3585,7 +3608,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/remove-shopping-list-item": {
@@ -3641,7 +3664,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/remove-user-presence": {
@@ -3685,7 +3708,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/request-otp": {
@@ -3757,7 +3780,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/scan-invoice": {
@@ -3821,7 +3844,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       },
       "post": {
         "tags": [
@@ -3982,7 +4005,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-market": {
@@ -4037,7 +4060,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-product": {
@@ -4060,7 +4083,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "requestBody": {
           "required": true,
           "content": {
@@ -4180,7 +4203,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-shopping-list-item": {
@@ -4247,7 +4270,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-user-onboarding": {
@@ -4310,7 +4333,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-user-presence": {
@@ -4358,7 +4381,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-user-profile": {
@@ -4442,7 +4465,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-user-settings": {
@@ -4486,7 +4509,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/update-user-terms": {
@@ -4512,7 +4535,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "requestBody": {
           "required": true,
           "content": {
@@ -4641,7 +4664,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/validate-session": {
@@ -4821,7 +4844,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     },
     "/verify-beta-access": {
@@ -4847,7 +4870,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11",
+        "x-last-synced": "2026-03-12",
         "parameters": [
           {
             "name": "phone",
@@ -4969,7 +4992,7 @@
           }
         },
         "x-source": "auto-synced",
-        "x-last-synced": "2026-03-11"
+        "x-last-synced": "2026-03-12"
       }
     }
   },
@@ -5842,6 +5865,6 @@
       }
     }
   },
-  "x-generated-at": "2026-03-11T17:58:08.431Z",
+  "x-generated-at": "2026-03-12T00:57:49.073Z",
   "x-generator": "scripts/generate-openapi.js"
 }

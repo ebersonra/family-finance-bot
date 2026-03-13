@@ -35,11 +35,13 @@ export type { GetMemberTransactionsParams };
 // ── Membros ───────────────────────────────────────
 
 /**
- * Busca o membro pelo número de telefone consultando:
- *  1. POST /user-auth (action: getOrCreate) → obtém o user_id
- *  2. GET  /family-finance-member?user_id=  → obtém o perfil do membro
+ * Busca o membro pelo número de telefone seguindo o fluxo completo:
+ *  1. GET  /get-user-by-phone          → obtém o user_id
+ *  2. GET  /family-finance-member      → obtém o perfil do membro
+ *  3. GET  /family-finance-group       → obtém o family_id do primeiro grupo
  *
- * Retorna null se o usuário não existir ou não tiver perfil de finanças.
+ * Retorna null se o usuário não existir, não tiver perfil ou não pertencer
+ * a nenhum grupo familiar (family_id é obrigatório para todas as operações).
  *
  * @security Nunca cria usuário sem intenção explícita do app principal.
  *           O bot trabalha apenas com usuários já registrados.
@@ -53,9 +55,15 @@ export async function getMemberByPhone(phone: string): Promise<Member | null> {
   const profile = await getMemberProfile(user.id);
   if (!profile) return null;
 
+  // Passo 3: Recuperar o family_id do primeiro grupo do usuário
+  const groups = await getGroups(user.id);
+  if (!groups || groups.length === 0) return null;
+  const familyId = groups[0].id;
+
   return {
     id: profile.id,         // ID do perfil family-finance-member
     userId: user.id,        // UUID do usuário autenticado
+    familyId,               // UUID do grupo familiar principal
     name: profile.name,
     phone: profile.phone,
   };
@@ -69,16 +77,19 @@ export async function getMemberByPhone(phone: string): Promise<Member | null> {
  * @param tx       Transação parseada pelo NLP
  * @param memberId ID do perfil family-finance-member
  * @param userId   UUID do usuário autenticado
+ * @param familyId UUID do grupo familiar
  */
 export async function saveTransaction(
   tx: ParsedTransaction,
   memberId: string,
   userId: string,
+  familyId: string,
 ): Promise<{ id: string } | null> {
   try {
     const result = await createTransaction({
       user_id: userId,
       member_id: memberId,
+      family_id: familyId,
       name: tx.name,
       amount: tx.amount,
       category: tx.category,
@@ -98,13 +109,15 @@ export async function saveTransaction(
  *
  * @param memberId ID do perfil family-finance-member
  * @param userId   UUID do usuário autenticado
+ * @param familyId UUID do grupo familiar
  */
 export async function deleteLastTransaction(
   memberId: string,
   userId: string,
+  familyId: string,
 ): Promise<boolean> {
   try {
-    const result = await deleteLastWhatsAppTransaction(userId, memberId);
+    const result = await deleteLastWhatsAppTransaction(userId, memberId, familyId);
     return result.deleted;
   } catch (err) {
     console.error('[API] Erro ao deletar última transação:', (err as Error).message);
@@ -135,10 +148,11 @@ export async function getMonthlySummary(
 /**
  * Retorna todas as metas da família via GET /family-finance-goals.
  *
- * @param userId UUID do usuário autenticado
+ * @param userId   UUID do usuário autenticado
+ * @param familyId UUID do grupo familiar
  */
-export async function getGoalsSummary(userId: string): Promise<FamilyGoal[]> {
-  return getGoals(userId);
+export async function getGoalsSummary(userId: string, familyId: string): Promise<FamilyGoal[]> {
+  return getGoals(userId, familyId);
 }
 
 // ── Grupos Familiares ─────────────────────────────
