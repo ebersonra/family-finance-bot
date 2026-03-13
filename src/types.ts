@@ -14,6 +14,7 @@ export type CategoryId =
   | 'restaurant'
   | 'market'
   | 'butcher'
+  | 'fishmonger'
   | 'personal';
 
 export interface ParsedTransaction {

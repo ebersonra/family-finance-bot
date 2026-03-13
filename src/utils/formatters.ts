@@ -9,6 +9,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   restaurant: '🍽️ Restaurante',
   market: '🛒 Mercado',
   butcher: '🥩 Açougue',
+  fishmonger: '🐟 Peixaria',
   personal: '🪞 Pessoal',
   home: '🏠 Casa',
   transport: '🚗 Transporte',
