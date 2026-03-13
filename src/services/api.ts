@@ -450,13 +450,18 @@ export async function leaveGroup(
 
 /**
  * Shape bruta retornada pelo endpoint Supabase/PostgREST.
- * O join pode ser flat (campos no nível raiz) ou aninhado
- * (relação `members` embutida como objeto).
- *
- * Exemplos observados:
- *  - Flat:    { id, member_id, role, joined_at, name, phone }
- *  - Nested:  { id, role, joined_at, members: { id, name, phone } }
+ * Cobre as variações mais comuns de resposta de um join:
+ *  - Flat:     { id, member_id, role, joined_at, name, phone }
+ *  - Nested plural:   { id, role, joined_at, members: { id, name, phone } }
+ *  - Nested singular: { id, role, joined_at, member:  { id, name, phone } }
  */
+interface RawGroupMemberNested {
+  id?: string;
+  name?: string;
+  user_name?: string;
+  phone?: string;
+}
+
 interface RawGroupMember {
   id: string;
   member_id?: string;
@@ -464,24 +469,23 @@ interface RawGroupMember {
   joined_at?: string;
   // campos presentes na resposta flat
   name?: string;
+  user_name?: string;
   phone?: string;
-  // relação embutida pelo PostgREST (Supabase join)
-  members?: {
-    id?: string;
-    name?: string;
-    phone?: string;
-  } | null;
+  // relação embutida pelo PostgREST (plural ou singular)
+  members?: RawGroupMemberNested | null;
+  member?:  RawGroupMemberNested | null;
 }
 
 /**
  * Normaliza um item bruto da API para FamilyGroupMember,
- * suportando tanto respostas flat quanto relações aninhadas.
+ * suportando respostas flat e relações aninhadas (plural/singular).
  */
 function normalizeGroupMember(raw: RawGroupMember): FamilyGroupMember {
+  const nested = raw.members ?? raw.member ?? null;
   return {
-    id:        raw.member_id ?? raw.members?.id ?? raw.id,
-    name:      raw.name ?? raw.members?.name ?? '',
-    phone:     raw.phone ?? raw.members?.phone,
+    id:        raw.member_id ?? nested?.id ?? raw.id,
+    name:      raw.name ?? raw.user_name ?? nested?.name ?? nested?.user_name ?? '',
+    phone:     raw.phone ?? nested?.phone,
     role:      raw.role,
     joined_at: raw.joined_at,
   };
@@ -499,6 +503,8 @@ export async function getGroupMembers(
   const raw = await request<RawGroupMember[]>(
     `/family-finance-group-member${toQS({ user_id: userId, family_id: familyId })}`,
   );
+  // DEBUG — remover após identificar a estrutura real da resposta
+  console.debug('[API][group-member] raw payload:', JSON.stringify(raw?.[0] ?? raw, null, 2));
   return raw.map(normalizeGroupMember);
 }
 

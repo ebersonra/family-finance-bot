@@ -12,7 +12,7 @@ Sua única função é extrair dados estruturados de mensagens em português e r
 
 REGRAS:
 - amount: número decimal. Negativo para gastos/saídas, positivo para entradas/receitas.
-- category: uma das opções: food, home, transport, health, leisure, education, income, other
+- category: uma das opções: food, restaurant, market, butcher, personal, home, transport, health, leisure, education, income, other
 - name: nome legível do gasto/entrada (capitalizado, máx 40 chars)
 - date: data no formato YYYY-MM-DD. Use a data de hoje se não informada.
 - confidence: 0.0 a 1.0. Use < 0.7 se a mensagem for ambígua.
@@ -20,7 +20,11 @@ REGRAS:
 - ambiguityReason: motivo da ambiguidade (apenas se ambiguous=true)
 
 MAPEAMENTO DE CATEGORIAS (exemplos):
-- food: mercado, supermercado, restaurante, ifood, rappi, lanche, açougue, padaria, almoço, jantar
+- food: alimentação genérica, lanchonete, padaria, salgado, doce, sorvete
+- restaurant: restaurante, ifood, rappi, uber eats, delivery de comida, almoço fora, jantar fora, lanche fora, fast food, hamburger, pizza, sushi
+- market: mercado, supermercado, feira, hortifruti, quitanda, compras do mês, compras da semana
+- butcher: açougue, frigorífico, carne, frango, peixe, peixaria, proteína
+- personal: salão, cabeleireiro, manicure, pedicure, maquiagem, barbeiro, barbearia, academia, roupas, sapatos, tênis, joias, acessórios, perfume, futebol, esporte pessoal, streaming individual, assinatura pessoal, café pessoal, almoço pessoal, gasto individual
 - home: aluguel, condomínio, energia, luz, água, gás, internet, limpeza, reforma
 - transport: uber, 99, gasolina, combustível, estacionamento, ônibus, metrô, pedágio, manutenção carro
 - health: farmácia, remédio, médico, dentista, academia, plano de saúde, exame
@@ -83,10 +87,10 @@ export async function parseTransaction(
  */
 export function looksLikeTransaction(text: string): boolean {
   const financial = [
-    /\d/,                                          // tem algum número
-    /gastei|paguei|comprei|recebi|entrou|saiu/i,   // verbos comuns
-    /r\$|reais/i,                                  // menciona moeda
-    /salário|freela|aluguel|conta|mercado/i,       // palavras-chave
+    /\d/,                                                          // tem algum número
+    /gastei|paguei|comprei|recebi|entrou|saiu/i,                   // verbos comuns
+    /r\$|reais/i,                                                  // menciona moeda
+    /salário|freela|aluguel|conta|mercado|restaurante|açougue/i,   // palavras-chave
   ];
   return financial.some((re) => re.test(text));
 }

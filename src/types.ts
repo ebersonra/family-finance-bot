@@ -10,7 +10,11 @@ export type CategoryId =
   | 'leisure'
   | 'education'
   | 'income'
-  | 'other';
+  | 'other'
+  | 'restaurant'
+  | 'market'
+  | 'butcher'
+  | 'personal';
 
 export interface ParsedTransaction {
   amount: number;          // negativo = gasto, positivo = entrada

@@ -5,7 +5,11 @@
 import type { ParsedTransaction, FamilyGoal, FamilyGroup, FamilyGroupMember, ApiMonthlySummary } from '../types';
 
 const CATEGORY_LABELS: Record<string, string> = {
-  food: '🛒 Alimentação',
+  food: '🍕 Alimentação',
+  restaurant: '🍽️ Restaurante',
+  market: '🛒 Mercado',
+  butcher: '🥩 Açougue',
+  personal: '🪞 Pessoal',
   home: '🏠 Casa',
   transport: '🚗 Transporte',
   health: '💊 Saúde',
