@@ -18,7 +18,10 @@ export type CategoryId =
   | 'personal'
   | 'greengrocery'
   | 'pet'
-  | 'delivery';
+  | 'delivery'
+  | 'loan'
+  | 'credit_card'
+  | 'streaming';
 
 export interface ParsedTransaction {
   amount: number;          // negativo = gasto, positivo = entrada

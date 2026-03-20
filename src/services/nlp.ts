@@ -12,7 +12,7 @@ Sua única função é extrair dados estruturados de mensagens em português e r
 
 REGRAS:
 - amount: número decimal. Negativo para gastos/saídas, positivo para entradas/receitas.
-- category: uma das opções: food, restaurant, market, butcher, fishmonger, greengrocery, pet, delivery, personal, home, transport, health, leisure, education, income, other
+- category: uma das opções: food, restaurant, market, butcher, fishmonger, greengrocery, pet, delivery, personal, home, transport, health, leisure, education, income, loan, credit_card, streaming, other
 - name: nome legível do gasto/entrada (capitalizado, máx 40 chars)
 - date: data no formato YYYY-MM-DD. Use a data de hoje se não informada.
 - confidence: 0.0 a 1.0. Use < 0.7 se a mensagem for ambígua.
@@ -28,7 +28,10 @@ MAPEAMENTO DE CATEGORIAS (exemplos):
 - greengrocery: hortifruti, verduras, legumes, frutas, quitanda, feira de verduras, orgânicos, salada, cenoura, tomate, banana, maçã, uva
 - pet: pet shop, ração, veterinário, banho e tosa, tosa, vacina animal, remédio animal, acessórios pet, coleira, aquário, gato, cachorro, pássaro
 - delivery: delivery, ifood iFood almoço em casa, jantar em casa, pedido pelo app, motoboy, taxa de entrega, entrega em domicílio
-- personal: salão, cabeleireiro, manicure, pedicure, maquiagem, barbeiro, barbearia, academia, roupas, sapatos, tênis, joias, acessórios, perfume, futebol, esporte pessoal, streaming individual, assinatura pessoal, café pessoal, almoço pessoal, gasto individual
+- personal: salão, cabeleireiro, manicure, pedicure, maquiagem, barbeiro, barbearia, academia, roupas, sapatos, tênis, joias, acessórios, perfume, futebol, esporte pessoal, café pessoal, almoço pessoal, gasto individual
+- loan: empréstimo, financiamento, parcela empréstimo, parcela financiamento, consórcio, crédito pessoal, crediário, emprestei, paguei parcela, quitei parcela
+- credit_card: fatura cartão, fatura do cartão, cartão de crédito, pagamento cartão, boleto cartão, débito cartão, vencimento cartão, limite cartão, cartão visa, cartão mastercard, cartão nubank, cartão inter
+- streaming: netflix, spotify, amazon prime, disney plus, hbo max, paramount, youtube premium, apple tv, deezer, crunchyroll, globoplay, telecine, mubi, assinatura streaming, assinatura mensal app
 - home: aluguel, condomínio, energia, luz, água, gás, internet, limpeza, reforma
 - transport: uber, 99, gasolina, combustível, estacionamento, ônibus, metrô, pedágio, manutenção carro
 - health: farmácia, remédio, médico, dentista, academia, plano de saúde, exame
@@ -94,7 +97,7 @@ export function looksLikeTransaction(text: string): boolean {
     /\d/,                                                          // tem algum número
     /gastei|paguei|comprei|recebi|entrou|saiu/i,                   // verbos comuns
     /r\$|reais/i,                                                  // menciona moeda
-    /salário|freela|aluguel|conta|mercado|restaurante|açougue|hortifruti|petshop|delivery/i,   // palavras-chave
+    /salário|freela|aluguel|conta|mercado|restaurante|açougue|hortifruti|petshop|delivery|empréstimo|fatura|streaming|netflix|spotify/i,   // palavras-chave
   ];
   return financial.some((re) => re.test(text));
 }

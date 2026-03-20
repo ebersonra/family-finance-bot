@@ -20,6 +20,9 @@ const CATEGORY_LABELS: Record<string, string> = {
   leisure: '🎬 Lazer',
   education: '📚 Educação',
   income: '💰 Renda',
+  loan: '🏦 Empréstimo',
+  credit_card: '💳 Cartão de Crédito',
+  streaming: '📺 Streaming',
   other: '📦 Outros',
 };
 
@@ -84,10 +87,10 @@ export function formatSummary(summary: ApiMonthlySummary): string {
   const monthName = new Date(Number(year), Number(monthNum) - 1, 1)
     .toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
 
-  // Top 3 categorias por valor absoluto
+  // Todas as categorias com valor > 0, ordenadas do maior para o menor
   const topCategories = [...by_category]
-    .sort((a, b) => b.category_total - a.category_total)
-    .slice(0, 3);
+    .filter((c) => c.category_total > 0)
+    .sort((a, b) => b.category_total - a.category_total);
 
   const topLines = topCategories.map(
     (c, i) => `  ${i + 1}. ${CATEGORY_LABELS[c.category] ?? c.category}: *${fmt(c.category_total)}*`,
@@ -100,7 +103,7 @@ export function formatSummary(summary: ApiMonthlySummary): string {
     `📤 Saídas:   *${fmt(total_expenses)}*`,
     `💰 Saldo:    *${balance >= 0 ? '+' : '-'}${fmt(balance)}*`,
     ``,
-    topCategories.length > 0 ? `🏆 *Top categorias:*` : '',
+    topCategories.length > 0 ? `🏆 *Gastos por categoria:*` : '',
     ...topLines,
     ``,
     `_Abra o app para ver o detalhamento completo_`,
