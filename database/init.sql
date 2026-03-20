@@ -186,7 +186,11 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   CONSTRAINT transactions_category_valid CHECK (
-    category IN ('food', 'home', 'transport', 'health', 'leisure', 'education', 'income', 'other')
+    category IN (
+      'food', 'home', 'transport', 'health', 'leisure', 'education', 'income', 'other',
+      'restaurant', 'market', 'butcher', 'fishmonger', 'greengrocery',
+      'pet', 'delivery', 'personal', 'loan', 'credit_card', 'streaming'
+    )
   ),
   CONSTRAINT transactions_source_valid CHECK (
     source IN ('app', 'whatsapp')
@@ -197,8 +201,25 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 COMMENT ON TABLE  transactions            IS 'Todas as transações financeiras da família';
 COMMENT ON COLUMN transactions.amount     IS 'Valor: negativo para gastos, positivo para entradas';
-COMMENT ON COLUMN transactions.category   IS 'food | home | transport | health | leisure | education | income | other';
+COMMENT ON COLUMN transactions.category   IS 'food | home | transport | health | leisure | education | income | other | restaurant | market | butcher | fishmonger | greengrocery | pet | delivery | personal | loan | credit_card | streaming';
 COMMENT ON COLUMN transactions.source     IS 'Origem do lançamento: app (mobile/web) ou whatsapp (bot)';
+
+-- -------------------------------------------------------------
+-- MIGRAÇÃO · Atualiza o CHECK de categoria em bancos existentes
+-- Idempotente: DROP CONSTRAINT IF EXISTS + ADD CONSTRAINT
+-- Execute no Supabase SQL Editor se o banco já estiver em produção.
+-- -------------------------------------------------------------
+ALTER TABLE transactions
+  DROP CONSTRAINT IF EXISTS transactions_category_valid;
+
+ALTER TABLE transactions
+  ADD CONSTRAINT transactions_category_valid CHECK (
+    category IN (
+      'food', 'home', 'transport', 'health', 'leisure', 'education', 'income', 'other',
+      'restaurant', 'market', 'butcher', 'fishmonger', 'greengrocery',
+      'pet', 'delivery', 'personal', 'loan', 'credit_card', 'streaming'
+    )
+  );
 
 
 -- Índices para queries comuns
