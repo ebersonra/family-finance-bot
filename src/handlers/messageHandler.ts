@@ -134,7 +134,8 @@ async function handleTransaction(
 
   await msg.reply('⏳ Analisando...');
 
-  const today = new Date().toISOString().split('T')[0];
+  // Usa o timezone de Brasília para não avançar o dia em horários próximos à meia-noite UTC
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Sao_Paulo' });
   const parsed = await parseTransaction(text, today);
 
   if (!parsed) {

@@ -286,7 +286,8 @@ export const HELP_MESSAGE = [
 // ── Helpers ───────────────────────────────────────
 
 function formatDate(iso: string): string {
-  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR');
+  // Força o timezone de Brasília para evitar desvio de dia em servidores UTC
+  return new Date(iso + 'T12:00:00').toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 }
 
 function progressBar(pct: number, length = 10): string {
